@@ -1,0 +1,39 @@
+version: "2"
+
+linters:
+  default: none
+  enable:
+    - govet       # reports suspicious constructs
+    - staticcheck # comprehensive static analysis
+    - ineffassign # detects assignments with no effect
+    - unused      # finds unused code
+    - gofmt       # enforces gofmt formatting
+
+linters-settings:
+  govet:
+    enable-all: false
+    enable:
+      - shadow
+      - printf
+  staticcheck:
+    checks:
+      - "all"
+      - "-SA1019" # ignore deprecated usage warnings
+
+issues:
+  max-issues-per-linter: 50
+  max-same-issues: 10
+  exclude-rules:
+    # Test files get a looser pass
+    - path: "_test\\.go"
+      linters:
+        - unused
+        - govet
+    # e2e tests reference internal test helpers
+    - path: "e2e/"
+      linters:
+        - unused
+    # Generated or embedded files
+    - path: "internal/db/migrations/"
+      linters:
+        - all
