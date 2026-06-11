@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Concepts — Artifact Docs</title>
+  <link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-inner">
+    <a class="nav-logo" href="../index.html">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect width="20" height="20" rx="5" fill="#6366f1"/><path d="M5 14l5-8 5 8" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M7.5 11h5" stroke="white" stroke-width="1.8" stroke-linecap="round"/></svg>
+      Artifact<span>.</span>
+    </a>
+    <div class="nav-links">
+      <a href="index.html">Docs</a>
+      <a href="getting-started.html">Getting started</a>
+      <a href="sdk-reference.html">SDK</a>
+      <a href="self-hosting.html">Self-hosting</a>
+      <a href="https://github.com/artifact/artifact">GitHub</a>
+      <a class="nav-cta" href="getting-started.html">Get started →</a>
+    </div>
+  </div>
+</nav>
+
+<div class="docs-layout">
+  <aside class="docs-sidebar">
+    <div class="sidebar-section">
+      <h4>Getting started</h4>
+      <a href="getting-started.html">Quickstart</a>
+      <a href="concepts.html" class="active">Concepts</a>
+    </div>
+    <div class="sidebar-section">
+      <h4>SDK reference</h4>
+      <a href="sdk-reference.html">Overview</a>
+    </div>
+    <div class="sidebar-section">
+      <h4>CLI reference</h4>
+      <a href="cli-reference.html">All commands</a>
+    </div>
+    <div class="sidebar-section">
+      <h4>Self-hosting</h4>
+      <a href="self-hosting.html">Overview</a>
+      <a href="auth.html">Auth setup</a>
+      <a href="governance.html">Governance</a>
+      <a href="ai-setup.html">AI gateway</a>
+      <a href="warehouse.html">Warehouse</a>
+    </div>
+  </aside>
+
+  <main class="docs-content">
+    <div class="breadcrumb"><a href="../index.html">Artifact</a><span>›</span><a href="index.html">Docs</a><span>›</span><span>Concepts</span></div>
+    <h1>Concepts</h1>
+    <p class="lead">The mental model behind Artifact — the trust bubble, sites, sessions, and why all primitives live on the server.</p>
+
+    <h2>The trust bubble</h2>
+    <p>Every company already has a trust bubble: the set of infrastructure reachable only by verified employees. Workday, Confluence, GitHub Enterprise, and your internal dashboards all live there. Getting past the perimeter means passing your SSO.</p>
+    <p>Artifact lives entirely inside this bubble. Because every HTTP request is already an authenticated employee, Artifact can expose powerful primitives without any API keys, CORS configuration, or per-user auth code. The trust that your company already established flows directly into every app.</p>
+
+    <div class="callout callout-danger">
+      <div class="callout-icon">🚨</div>
+      <div class="callout-body"><p><strong>Artifact is not designed for public internet exposure.</strong> Never put an Artifact server on a public ingress. It is designed exclusively for internal deployment behind corporate SSO or a zero-trust proxy.</p></div>
+    </div>
+
+    <h2>Sites</h2>
+    <p>A <strong>site</strong> is the unit of deployment. Each site:</p>
+    <ul>
+      <li>Has a <strong>name</strong> (e.g. <code class="inline-code">lunch-poll</code>) that maps to a subdomain (<code class="inline-code">lunch-poll.artifact.corp.com</code>)</li>
+      <li>Contains a set of <strong>static files</strong> (HTML, CSS, JS, images)</li>
+      <li>Has its own isolated <strong>document collections</strong> and <strong>KV store</strong></li>
+      <li>Has a recorded <strong>owner</strong> (the employee who first deployed it)</li>
+    </ul>
+    <p>You can have thousands of sites on a single Artifact server. They share the database and storage infrastructure but are logically isolated.</p>
+
+    <h2>Deploys</h2>
+    <p>Each <code class="inline-code">artifact deploy</code> creates a new <strong>deploy</strong> object. Artifact:</p>
+    <ol>
+      <li>Uploads all files to object storage under a deploy ID prefix</li>
+      <li>Writes a manifest JSON listing all files and their content hashes</li>
+      <li>Atomically updates a manifest pointer in the database</li>
+    </ol>
+    <p>The atomic pointer flip means a site is <em>never</em> served in a half-deployed state. Until the pointer flips, the old version continues serving. There is no downtime during a deploy.</p>
+    <p>Artifact keeps an LRU cache of recently-accessed deploy IDs in memory so manifest lookups are O(1) for hot sites.</p>
+
+    <h2>Sessions</h2>
+    <p>When a user authenticates via OIDC, Artifact:</p>
+    <ol>
+      <li>Exchanges the auth code for tokens with the IdP</li>
+      <li>Creates a <strong>session record</strong> in the database (table: <code class="inline-code">sessions</code>)</li>
+      <li>Sets a signed, opaque <code class="inline-code">artifact_session</code> cookie</li>
+    </ol>
+    <p>The session stores the user's email, name, and group memberships. Sessions persist across server restarts (they're in the DB). Session TTL defaults to 12 hours and is refreshed on activity.</p>
+    <p>In <strong>dev mode</strong>, sessions are replaced by a fake <code class="inline-code">dev@localhost</code> identity injected on every request.</p>
+    <p>In <strong>header-trust mode</strong>, identity comes from headers set by an upstream IAP (e.g. <code class="inline-code">X-Forwarded-Email</code>). No database sessions are used.</p>
+
+    <h2>Anatomy of a request</h2>
+    <p>Every request to Artifact flows through:</p>
+    <ol>
+      <li><strong>Auth middleware</strong> — validates session cookie / header / OIDC state; rejects unauthenticated requests with a redirect to the login page</li>
+      <li><strong>Subdomain router</strong> — extracts the site name from the <code class="inline-code">Host</code> header (e.g. <code class="inline-code">lunch-poll.artifact.corp.com</code> → site <code class="inline-code">lunch-poll</code>); requests to the apex domain show the site directory</li>
+      <li><strong>Route handler</strong>:
+        <ul>
+          <li><code class="inline-code">GET /_/* </code> → serve static file from object storage (with ETag / conditional GET)</li>
+          <li><code class="inline-code">POST /api/v1/db/*</code> → database CRUD</li>
+          <li><code class="inline-code">GET /ws</code> → upgrade to WebSocket</li>
+          <li><code class="inline-code">POST /api/v1/ai/*</code> → proxy to upstream LLM</li>
+          <li>etc.</li>
+        </ul>
+      </li>
+      <li><strong>Audit logging</strong> — every API call is recorded in the audit log with user, site, action, and timestamp</li>
+    </ol>
+
+    <h2>Why no custom backends?</h2>
+    <p>You might wonder: why can't I run server-side code per site? The answer is about operational simplicity and security. Custom backends mean:</p>
+    <ul>
+      <li>Per-site servers that need on-call ownership</li>
+      <li>Security reviews for every throwaway tool</li>
+      <li>Dependency upgrades across hundreds of repos</li>
+      <li>Unknown network egress from arbitrary code</li>
+    </ul>
+    <p>Artifact's bet is that a fixed set of primitives covers 95% of internal apps when you're inside the trust bubble. The things that typically require a backend — auth, database writes, AI calls, file storage — are provided with zero configuration. When you hit a wall, the answer is almost always "combine two SDK primitives."</p>
+    <p>For the remaining 5%, Artifact sites can call <em>other</em> internal services (your existing APIs) from the browser, since they're in the same trust bubble.</p>
+
+    <h2>Storage backends</h2>
+    <p>Artifact supports three object storage backends, selectable in <code class="inline-code">artifact.yaml</code>:</p>
+    <table>
+      <thead><tr><th>Backend</th><th>Config key</th><th>Best for</th></tr></thead>
+      <tbody>
+        <tr><td>Local disk</td><td><code class="inline-code">storage.type: local</code></td><td>Dev / single VM</td></tr>
+        <tr><td>S3 / MinIO</td><td><code class="inline-code">storage.type: s3</code></td><td>AWS, self-hosted MinIO</td></tr>
+        <tr><td>GCS</td><td><code class="inline-code">storage.type: gcs</code></td><td>Google Cloud</td></tr>
+      </tbody>
+    </table>
+
+    <h2>Database backends</h2>
+    <table>
+      <thead><tr><th>Backend</th><th>Config key</th><th>Best for</th></tr></thead>
+      <tbody>
+        <tr><td>SQLite</td><td><code class="inline-code">db.type: sqlite</code></td><td>Dev, single-server prod</td></tr>
+        <tr><td>PostgreSQL</td><td><code class="inline-code">db.type: postgres</code></td><td>Production, multi-replica</td></tr>
+      </tbody>
+    </table>
+
+    <h2>Multi-replica scaling</h2>
+    <p>Artifact scales horizontally with:</p>
+    <ul>
+      <li><strong>External Postgres</strong> as the shared database</li>
+      <li><strong>S3 / GCS</strong> as the shared object store</li>
+      <li><strong>NATS</strong> for WebSocket pub/sub across replicas</li>
+    </ul>
+    <p>Without NATS, WebSocket events only reach clients connected to the same replica. With NATS, any replica that receives a DB write broadcasts it to all connected clients cluster-wide.</p>
+
+    <div class="docs-nav-footer">
+      <a class="docs-nav-link" href="getting-started.html">
+        <div class="dir">← Previous</div>
+        <div class="title">Getting started</div>
+      </a>
+      <a class="docs-nav-link next" href="self-hosting.html">
+        <div class="dir">Next</div>
+        <div class="title">Self-hosting →</div>
+      </a>
+    </div>
+  </main>
+</div>
+
+</body>
+</html>

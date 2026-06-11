@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Lunch Vote</title>
+  <script src="/artifact.js"></script>
+  <style>
+    body { font-family: system-ui; max-width: 500px; margin: 3rem auto; text-align: center; }
+    button { display: block; width: 100%; margin: 0.5rem 0; padding: 1rem; font-size: 1.1rem; border: 2px solid #e5e7eb; border-radius: 12px; background: #fff; cursor: pointer; }
+    button:hover { border-color: #2563eb; }
+    .winner { border-color: #22c55e; background: #f0fdf4; }
+  </style>
+</head>
+<body>
+  <h1>🍽️ Lunch Vote</h1>
+  <div id="options"></div>
+  <p id="status"></p>
+  <script>
+    const SPOTS = ['Ramen House', 'Taco Truck', 'Salad Bar', 'Pizza Place'];
+    const votes = artifact.db.collection('lunch_votes');
+    const room = artifact.ws.room('lunch');
+    artifact.ready().then(() => { render(); load(); votes.subscribe({ onCreate: load }); });
+    function render() {
+      document.getElementById('options').innerHTML = SPOTS.map(s =>
+        `<button onclick="vote('${s}')">${s}</button>`
+      ).join('');
+    }
+    async function vote(spot) {
+      await votes.create({ spot, voter: artifact.me.name });
+      try { await artifact.notify.slack('#lunch', `${artifact.me.name} voted for ${spot}`); } catch {}
+      room.send({ type: 'vote', spot });
+    }
+    async function load() {
+      const all = await votes.list({ limit: 100 });
+      const counts = {};
+      SPOTS.forEach(s => counts[s] = 0);
+      all.forEach(v => { if (counts[v.data.spot] !== undefined) counts[v.data.spot]++; });
+      const winner = Object.entries(counts).sort((a,b) => b[1]-a[1])[0];
+      document.getElementById('status').textContent = `${all.length} votes · Leading: ${winner[0]} (${winner[1]})`;
+    }
+  </script>
+</body>
+</html>

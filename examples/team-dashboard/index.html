@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Team Dashboard</title>
+  <script src="/artifact.js"></script>
+  <style>
+    body { font-family: system-ui; margin: 2rem; background: #f8fafc; }
+    h1 { font-weight: 600; }
+    table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+    th, td { padding: 0.75rem 1rem; text-align: left; border-bottom: 1px solid #eee; }
+    th { background: #f1f5f9; }
+    .note { color: #64748b; font-size: 0.9rem; margin-bottom: 1rem; }
+  </style>
+</head>
+<body>
+  <h1>Team Dashboard</h1>
+  <p class="note">Requires warehouse configuration. Shows sample data in dev mode.</p>
+  <table><thead><tr id="header"></tr></thead><tbody id="rows"></tbody></table>
+  <script>
+    artifact.ready().then(async () => {
+      try {
+        const { rows } = await artifact.warehouse.query('SELECT 1 as region, 100 as gmv');
+        if (rows.length) {
+          const cols = Object.keys(rows[0]);
+          document.getElementById('header').innerHTML = cols.map(c => `<th>${c}</th>`).join('');
+          document.getElementById('rows').innerHTML = rows.map(r =>
+            `<tr>${cols.map(c => `<td>${r[c]}</td>`).join('')}</tr>`
+          ).join('');
+        }
+      } catch (e) {
+        document.querySelector('.note').textContent = 'Warehouse not configured: ' + e.message;
+      }
+    });
+  </script>
+</body>
+</html>

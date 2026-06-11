@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CLI Reference — Artifact Docs</title>
+  <link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-inner">
+    <a class="nav-logo" href="../index.html">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect width="20" height="20" rx="5" fill="#6366f1"/><path d="M5 14l5-8 5 8" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M7.5 11h5" stroke="white" stroke-width="1.8" stroke-linecap="round"/></svg>
+      Artifact<span>.</span>
+    </a>
+    <div class="nav-links">
+      <a href="index.html">Docs</a>
+      <a href="getting-started.html">Getting started</a>
+      <a href="sdk-reference.html">SDK</a>
+      <a href="self-hosting.html">Self-hosting</a>
+      <a href="https://github.com/artifact/artifact">GitHub</a>
+      <a class="nav-cta" href="getting-started.html">Get started →</a>
+    </div>
+  </div>
+</nav>
+
+<div class="docs-layout">
+  <aside class="docs-sidebar">
+    <div class="sidebar-section">
+      <h4>Getting started</h4>
+      <a href="getting-started.html">Quickstart</a>
+      <a href="concepts.html">Concepts</a>
+    </div>
+    <div class="sidebar-section">
+      <h4>SDK reference</h4>
+      <a href="sdk-reference.html">Overview</a>
+    </div>
+    <div class="sidebar-section">
+      <h4>CLI reference</h4>
+      <a href="cli-reference.html" class="active">All commands</a>
+      <a href="#serve">artifact serve</a>
+      <a href="#dev">artifact dev</a>
+      <a href="#init">artifact init</a>
+      <a href="#deploy">artifact deploy</a>
+      <a href="#login">artifact login</a>
+      <a href="#list">artifact list</a>
+      <a href="#open">artifact open</a>
+      <a href="#logs">artifact logs</a>
+      <a href="#mcp">artifact mcp</a>
+      <a href="#version">artifact version</a>
+    </div>
+    <div class="sidebar-section">
+      <h4>Self-hosting</h4>
+      <a href="self-hosting.html">Overview</a>
+      <a href="auth.html">Auth setup</a>
+      <a href="governance.html">Governance</a>
+      <a href="ai-setup.html">AI gateway</a>
+      <a href="warehouse.html">Warehouse</a>
+    </div>
+  </aside>
+
+  <main class="docs-content">
+    <div class="breadcrumb"><a href="../index.html">Artifact</a><span>›</span><a href="index.html">Docs</a><span>›</span><span>CLI reference</span></div>
+    <h1>CLI reference</h1>
+    <p class="lead">All Artifact CLI commands. Run <code class="inline-code">artifact &lt;command&gt; --help</code> for full flag reference.</p>
+
+    <h2>Global flags</h2>
+    <table>
+      <thead><tr><th>Flag</th><th>Default</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td><code class="inline-code">--config</code></td><td><code class="inline-code">artifact.yaml</code></td><td>Path to config file</td></tr>
+        <tr><td><code class="inline-code">--server</code></td><td><code class="inline-code">http://localhost:8443</code></td><td>Server URL for client commands</td></tr>
+        <tr><td><code class="inline-code">--token</code></td><td></td><td>Auth token (or set <code class="inline-code">ARTIFACT_TOKEN</code>)</td></tr>
+      </tbody>
+    </table>
+
+    <!-- ─── serve ─── -->
+    <h2 id="serve">artifact serve</h2>
+    <p>Run the Artifact server in production mode. Reads <code class="inline-code">artifact.yaml</code> for configuration.</p>
+    <div class="code-block">artifact serve [flags]</div>
+    <table>
+      <thead><tr><th>Flag</th><th>Default</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td><code class="inline-code">--config</code></td><td><code class="inline-code">artifact.yaml</code></td><td>Config file path</td></tr>
+        <tr><td><code class="inline-code">--port</code></td><td><code class="inline-code">8443</code></td><td>HTTP listen port</td></tr>
+        <tr><td><code class="inline-code">--host</code></td><td><code class="inline-code">0.0.0.0</code></td><td>HTTP listen address</td></tr>
+      </tbody>
+    </table>
+    <div class="code-block">artifact serve --config /etc/artifact/artifact.yaml --port 443</div>
+
+    <!-- ─── dev ─── -->
+    <h2 id="dev">artifact dev</h2>
+    <p>Run the dev server with SQLite, local storage, and fake identity. No config required.</p>
+    <div class="code-block">artifact dev [flags]</div>
+    <table>
+      <thead><tr><th>Flag</th><th>Default</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td><code class="inline-code">--port</code></td><td><code class="inline-code">8443</code></td><td>Port to listen on</td></tr>
+        <tr><td><code class="inline-code">--data</code></td><td><code class="inline-code">.artifact-data</code></td><td>Data directory for SQLite and files</td></tr>
+      </tbody>
+    </table>
+    <p>Dev mode automatically:</p>
+    <ul>
+      <li>Logs every request to the terminal</li>
+      <li>Creates a <code class="inline-code">dev@localhost</code> session (no SSO)</li>
+      <li>Stores state in <code class="inline-code">.artifact-data/</code> (gitignored)</li>
+    </ul>
+
+    <!-- ─── init ─── -->
+    <h2 id="init">artifact init</h2>
+    <p>Scaffold a new Artifact site in the current (or named) directory.</p>
+    <div class="code-block">artifact init [site-name]</div>
+    <p>Creates:</p>
+    <div class="code-block">[site-name]/
+├── index.html      ← starter page with artifact.js included
+├── artifact.json     ← { "site": "site-name" }
+├── CLAUDE.md       ← SDK skill file for Claude Code
+├── AGENTS.md       ← SDK skill file for other agents
+└── README.md</div>
+
+    <div class="callout callout-info">
+      <div class="callout-icon">ℹ️</div>
+      <div class="callout-body"><p><code class="inline-code">CLAUDE.md</code> and <code class="inline-code">AGENTS.md</code> tell AI coding assistants the full SDK surface so they can build Artifact apps without reading docs.</p></div>
+    </div>
+
+    <!-- ─── deploy ─── -->
+    <h2 id="deploy">artifact deploy</h2>
+    <p>Deploy the current directory (or a named directory) to the Artifact server.</p>
+    <div class="code-block">artifact deploy [directory] [flags]</div>
+    <table>
+      <thead><tr><th>Flag</th><th>Default</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td><code class="inline-code">--site</code></td><td>from artifact.json</td><td>Site name override</td></tr>
+        <tr><td><code class="inline-code">--server</code></td><td><code class="inline-code">http://localhost:8443</code></td><td>Target server</td></tr>
+        <tr><td><code class="inline-code">--exclude</code></td><td></td><td>Glob patterns to exclude (comma-separated)</td></tr>
+      </tbody>
+    </table>
+
+    <p>Deploy reads the site name from <code class="inline-code">artifact.json</code> in the directory. If there's no <code class="inline-code">artifact.json</code>, it uses the directory name.</p>
+    <div class="code-block">cd my-app
+artifact deploy                    # deploy . to localhost:8443
+artifact deploy --server https://artifact.corp.com
+artifact deploy --site my-app-v2  # override site name</div>
+
+    <!-- ─── login ─── -->
+    <h2 id="login">artifact login</h2>
+    <p>Authenticate with an Artifact server. Opens a browser for OIDC login and saves the token to <code class="inline-code">~/.config/artifact/token</code>.</p>
+    <div class="code-block">artifact login [server-url]</div>
+    <div class="code-block">artifact login https://artifact.corp.com
+# Opens browser → completes OIDC flow → saves token</div>
+
+    <!-- ─── list ─── -->
+    <h2 id="list">artifact list</h2>
+    <p>List all sites on the server.</p>
+    <div class="code-block">artifact list [flags]</div>
+    <div class="code-block">$ artifact list
+NAME             DEPLOY-ID   LAST DEPLOY          OWNER           FILES
+lunch-poll       dep_01J...  2026-06-11 11:08     alice@corp.com  3
+team-dashboard   dep_01J...  2026-06-11 09:22     alice@corp.com  5
+guestbook        dep_01J...  2026-06-10 15:41     bob@corp.com    2</div>
+
+    <!-- ─── open ─── -->
+    <h2 id="open">artifact open</h2>
+    <p>Open a site in the default browser.</p>
+    <div class="code-block">artifact open [site-name]</div>
+    <div class="code-block">artifact open lunch-poll   # opens http://lunch-poll.localhost:8443</div>
+
+    <!-- ─── logs ─── -->
+    <h2 id="logs">artifact logs</h2>
+    <p>Tail or display the audit log for a site or the whole server.</p>
+    <div class="code-block">artifact logs [site-name] [flags]</div>
+    <table>
+      <thead><tr><th>Flag</th><th>Default</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td><code class="inline-code">--tail</code></td><td>50</td><td>Number of recent entries to show</td></tr>
+        <tr><td><code class="inline-code">--follow</code>, <code class="inline-code">-f</code></td><td>false</td><td>Stream new entries</td></tr>
+        <tr><td><code class="inline-code">--json</code></td><td>false</td><td>Output as JSON lines</td></tr>
+      </tbody>
+    </table>
+    <div class="code-block">artifact logs lunch-poll -f --tail 100</div>
+
+    <!-- ─── mcp ─── -->
+    <h2 id="mcp">artifact mcp</h2>
+    <p>Start the MCP (Model Context Protocol) server so AI coding agents can deploy sites and query data programmatically.</p>
+    <div class="code-block">artifact mcp [flags]</div>
+    <p>Exposes the following MCP tools:</p>
+    <table>
+      <thead><tr><th>Tool</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td><code class="inline-code">deploy_site</code></td><td>Deploy a local directory to the Artifact server</td></tr>
+        <tr><td><code class="inline-code">list_sites</code></td><td>List all deployed sites</td></tr>
+        <tr><td><code class="inline-code">read_logs</code></td><td>Read the audit log for a site</td></tr>
+        <tr><td><code class="inline-code">query_db</code></td><td>Run a read-only query on a site's document collection</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Configure in Claude / Cursor</h3>
+    <p>Add to your MCP config (e.g. <code class="inline-code">~/.cursor/mcp.json</code>):</p>
+    <div class="code-block">{
+  "mcpServers": {
+    "artifact": {
+      "command": "artifact",
+      "args": ["mcp", "--server", "https://artifact.corp.com"]
+    }
+  }
+}</div>
+    <p>Now you can prompt: <em>"Build a live voting app and deploy it to Artifact"</em> — and the agent handles everything.</p>
+
+    <!-- ─── version ─── -->
+    <h2 id="version">artifact version</h2>
+    <div class="code-block">$ artifact version
+artifact v0.1.0 (go1.23.4, linux/amd64, built 2026-06-11)</div>
+
+    <div class="docs-nav-footer">
+      <a class="docs-nav-link" href="sdk-reference.html">
+        <div class="dir">← Previous</div>
+        <div class="title">SDK reference</div>
+      </a>
+      <a class="docs-nav-link next" href="concepts.html">
+        <div class="dir">Next</div>
+        <div class="title">Concepts →</div>
+      </a>
+    </div>
+  </main>
+</div>
+
+</body>
+</html>

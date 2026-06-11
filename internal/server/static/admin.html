@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Artifact Admin</title>
+  <script src="/artifact.js"></script>
+  <style>
+    body { font-family: system-ui; margin: 0; background: #f5f5f5; }
+    nav { background: #1a1a2e; color: #fff; padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center; }
+    nav h1 { font-size: 1.2rem; margin: 0; }
+    main { max-width: 1100px; margin: 2rem auto; padding: 0 2rem; }
+    .panel { background: #fff; border-radius: 8px; padding: 1.5rem; margin-bottom: 1.5rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+    h2 { font-size: 1rem; margin-bottom: 1rem; color: #333; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+    th, td { text-align: left; padding: 0.5rem; border-bottom: 1px solid #eee; }
+    th { color: #666; font-weight: 500; }
+    .badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 0.8rem; background: #e8f5e9; color: #2e7d32; }
+    .stat { font-size: 2rem; font-weight: 600; }
+    .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; }
+    .stat-card { text-align: center; }
+    .stat-label { color: #888; font-size: 0.85rem; }
+  </style>
+</head>
+<body>
+  <nav>
+    <h1>Artifact Admin Console</h1>
+    <span id="admin-user"></span>
+  </nav>
+  <main>
+    <div class="panel grid" id="stats-panel">
+      <div class="stat-card"><div class="stat" id="stat-sites">—</div><div class="stat-label">Sites</div></div>
+      <div class="stat-card"><div class="stat" id="stat-bytes">—</div><div class="stat-label">Total storage</div></div>
+      <div class="stat-card"><div class="stat" id="stat-mode">—</div><div class="stat-label">Governance</div></div>
+    </div>
+    <div class="panel">
+      <h2>Quotas <span class="badge" id="mode-badge">trust</span></h2>
+      <pre id="quotas" style="background:#f8f8f8;padding:1rem;border-radius:6px;font-size:0.85rem;overflow:auto"></pre>
+      <p style="color:#888;font-size:0.85rem">To switch to governed mode, set <code>governance.mode: governed</code> in artifact.yaml and restart.</p>
+    </div>
+    <div class="panel">
+      <h2>Sites</h2>
+      <table><thead><tr><th>Name</th><th>Owner</th><th>Deployed By</th><th>Size</th><th>Date</th></tr></thead><tbody id="sites"></tbody></table>
+    </div>
+    <div class="panel">
+      <h2>AI Usage (30 days)</h2>
+      <table><thead><tr><th>User</th><th>Site</th><th>Tokens</th><th>Requests</th></tr></thead><tbody id="usage"></tbody></table>
+    </div>
+    <div class="panel">
+      <h2>Audit Log</h2>
+      <table><thead><tr><th>Time</th><th>User</th><th>Site</th><th>Action</th><th>Detail</th></tr></thead><tbody id="audit"></tbody></table>
+    </div>
+  </main>
+  <script>
+    artifact.ready().then(async () => {
+      document.getElementById('admin-user').textContent = artifact.me.name;
+      const [stats, config, sites, usage, audit] = await Promise.all([
+        fetch('/api/v1/admin/stats', { credentials: 'same-origin' }).then(r => r.json()),
+        fetch('/api/v1/admin/config', { credentials: 'same-origin' }).then(r => r.json()),
+        fetch('/api/v1/sites', { credentials: 'same-origin' }).then(r => r.json()),
+        fetch('/api/v1/admin/usage', { credentials: 'same-origin' }).then(r => r.json()),
+        fetch('/api/v1/admin/audit?limit=50', { credentials: 'same-origin' }).then(r => r.json()),
+      ]);
+      document.getElementById('stat-sites').textContent = stats.site_count;
+      document.getElementById('stat-bytes').textContent = (stats.total_bytes / 1024 / 1024).toFixed(1) + ' MB';
+      document.getElementById('stat-mode').textContent = stats.governance;
+      document.getElementById('mode-badge').textContent = config.governance_mode;
+      document.getElementById('quotas').textContent = JSON.stringify(config.quotas, null, 2);
+      document.getElementById('sites').innerHTML = sites.map(s =>
+        `<tr><td>${s.name}</td><td>${s.owner||'—'}</td><td>${s.deployed_by}</td><td>${(s.size_bytes/1024).toFixed(0)} KB</td><td>${new Date(s.deployed_at).toLocaleString()}</td></tr>`
+      ).join('');
+      document.getElementById('usage').innerHTML = usage.map(u =>
+        `<tr><td>${u.user_email}</td><td>${u.site}</td><td>${u.total_tokens}</td><td>${u.requests}</td></tr>`
+      ).join('') || '<tr><td colspan="4">No AI usage yet</td></tr>';
+      document.getElementById('audit').innerHTML = audit.map(e =>
+        `<tr><td>${new Date(e.timestamp).toLocaleString()}</td><td>${e.user_email}</td><td>${e.site}</td><td>${e.action}</td><td>${e.detail||''}</td></tr>`
+      ).join('');
+    });
+  </script>
+</body>
+</html>

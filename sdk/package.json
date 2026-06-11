@@ -1,0 +1,12 @@
+{
+  "name": "@artifact/sdk",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "build": "vite build && cp dist/artifact.js ../internal/server/static/artifact.js"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.0",
+    "vite": "^6.0.0"
+  }
+}

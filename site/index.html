@@ -1,0 +1,655 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Artifact — Internal hosting platform for every company</title>
+  <meta name="description" content="Drop a folder of HTML into your company's trust bubble. Get a live internal URL with database, AI, files, websockets, and Slack — zero API keys, zero config. The open-source version of Shopify's Quick.">
+  <meta property="og:title" content="Artifact — Internal hosting platform">
+  <meta property="og:description" content="The open-source version of Shopify's Quick. Deploy internal apps in seconds behind your Okta.">
+  <link rel="stylesheet" href="assets/style.css">
+  <style>
+    .hero-split { display: grid; grid-template-columns: 1fr 1fr; gap: 4rem; align-items: center; }
+    .arch-diagram { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 2rem; }
+    .arch-row { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.6rem; font-size: 0.85rem; }
+    .arch-pill { background: var(--bg3); border: 1px solid var(--border); border-radius: 6px; padding: 0.3rem 0.7rem; white-space: nowrap; font-family: var(--font-mono); font-size: 0.78rem; }
+    .arch-arrow { color: var(--text2); flex-shrink: 0; }
+    .arch-group { border: 1px solid rgba(99,102,241,0.25); border-radius: 8px; padding: 0.75rem 1rem; margin: 0.75rem 0; }
+    .arch-group-label { font-size: 0.72rem; color: var(--accent2); font-weight: 600; text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 0.5rem; }
+    .faq-item { border-bottom: 1px solid var(--border); padding: 1.5rem 0; }
+    .faq-item:last-child { border-bottom: none; }
+    .faq-q { font-size: 1rem; font-weight: 600; margin-bottom: 0.6rem; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
+    .faq-a { font-size: 0.9rem; color: var(--text2); line-height: 1.7; }
+    .inspired { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.5rem 2rem; display: flex; align-items: flex-start; gap: 1.5rem; margin-top: 3rem; }
+    .inspired-icon { font-size: 2rem; flex-shrink: 0; }
+    .inspired p { font-size: 0.9rem; color: var(--text2); line-height: 1.7; margin: 0; }
+    .inspired strong { color: var(--text); }
+    @media (max-width: 900px) { .hero-split { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+
+<!-- ─── Nav ──────────────────────────────────────── -->
+<nav class="nav">
+  <div class="nav-inner">
+    <a class="nav-logo" href="/">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect width="20" height="20" rx="5" fill="#6366f1"/>
+        <path d="M5 14l5-8 5 8" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M7.5 11h5" stroke="white" stroke-width="1.8" stroke-linecap="round"/>
+      </svg>
+      Artifact<span>.</span>
+    </a>
+    <div class="nav-links">
+      <a href="docs/index.html">Docs</a>
+      <a href="docs/getting-started.html">Getting started</a>
+      <a href="docs/sdk-reference.html">SDK</a>
+      <a href="docs/self-hosting.html">Self-hosting</a>
+      <a href="https://github.com/artifact/artifact">GitHub</a>
+      <a class="nav-cta" href="docs/getting-started.html">Get started →</a>
+    </div>
+  </div>
+</nav>
+
+<!-- ─── Hero ─────────────────────────────────────── -->
+<section class="hero">
+  <div class="container">
+    <div class="hero-split">
+      <div>
+        <div class="hero-label">
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="5" fill="#34d399"/></svg>
+          Open source · Apache-2.0
+        </div>
+        <h1 class="hero-title">
+          Internal hosting for<br><em>every company</em>
+        </h1>
+        <p class="hero-sub">
+          Drop a folder of HTML into your company's trust bubble. Get a live internal URL with database, AI, file uploads, websockets, and Slack — zero API keys, zero config.
+        </p>
+        <div class="hero-actions">
+          <a class="btn btn-primary" href="docs/getting-started.html">Get started in 60 seconds</a>
+          <a class="btn btn-ghost" href="https://github.com/artifact/artifact">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+            GitHub
+          </a>
+        </div>
+        <div class="hero-stats">
+          <div class="hero-stat">
+            <strong>1</strong>
+            <span>Go binary</span>
+          </div>
+          <div class="hero-stat">
+            <strong>60s</strong>
+            <span>to first deploy</span>
+          </div>
+          <div class="hero-stat">
+            <strong>2 vCPU</strong>
+            <span>serves 5,000 employees</span>
+          </div>
+          <div class="hero-stat">
+            <strong>0</strong>
+            <span>API keys in client code</span>
+          </div>
+        </div>
+      </div>
+      <div>
+        <div class="terminal">
+          <div class="terminal-bar">
+            <div class="terminal-dot dot-red"></div>
+            <div class="terminal-dot dot-yellow"></div>
+            <div class="terminal-dot dot-green"></div>
+            <span class="terminal-title">artifact dev</span>
+          </div>
+          <div class="terminal-body">
+            <div><span class="t-prompt">$</span> <span class="t-cmd">artifact init lunch-poll</span></div>
+            <div class="t-success">✓ Created site in ./lunch-poll</div>
+            <div class="t-out">&nbsp;&nbsp;Run: cd lunch-poll &amp;&amp; artifact deploy</div>
+            <div>&nbsp;</div>
+            <div><span class="t-prompt">$</span> <span class="t-cmd">cd lunch-poll &amp;&amp; artifact deploy</span></div>
+            <div class="t-out">Uploading 3 files...</div>
+            <div class="t-success">✓ Deployed lunch-poll</div>
+            <div class="t-out">  → <span class="t-url">https://lunch-poll.artifact.corp.com</span></div>
+            <div>&nbsp;</div>
+            <div class="t-comment"># Every employee can now reach it behind Okta</div>
+            <div class="t-comment"># with database, AI, and realtime built in</div>
+            <div>&nbsp;</div>
+            <div><span class="t-prompt">$</span> <span class="t-cmd">artifact list</span></div>
+            <div class="t-out">lunch-poll     &nbsp; 2026-06-11 11:08 &nbsp; (you, 3 files)</div>
+            <div class="t-out">team-dashboard &nbsp; 2026-06-11 09:22 &nbsp; (alice, 5 files)</div>
+            <div class="t-out">guestbook      &nbsp; 2026-06-10 15:41 &nbsp; (bob, 2 files)</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─── Inspired by ───────────────────────────────── -->
+<div class="container">
+  <div class="inspired">
+    <div class="inspired-icon">💡</div>
+    <p>
+      <strong>Inspired by Shopify's Quick.</strong> Shopify built an internal platform where anyone drops HTML and gets a live URL with database and AI baked in — 50,000+ sites on a single $200/month VM, used by over half the company. They can't open-source it because it's welded to their GCP + IAP stack. Artifact is the same idea, rebuilt on pluggable parts so any company can run it behind their own Okta, on their own cloud. Apache-2.0.
+    </p>
+  </div>
+</div>
+
+<!-- ─── Features ─────────────────────────────────── -->
+<section class="section">
+  <div class="container">
+    <div class="section-label">Platform features</div>
+    <h2 class="section-title">Everything an internal app needs,<br>zero configuration</h2>
+    <p class="section-sub">Every primitive lives on the server. Client code never touches API keys, auth tokens, or database credentials.</p>
+    <div class="features-grid">
+
+      <div class="feature-card">
+        <div class="feature-icon">🗄️</div>
+        <h3>Realtime database</h3>
+        <p>Firebase-style document collections. Create, read, update, delete, and subscribe to live changes over WebSocket.</p>
+        <div class="feature-code">artifact.db.collection('posts').subscribe(…)</div>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon">🪪</div>
+        <h3>Employee identity</h3>
+        <p>Every request is a verified employee. <code style="font-size:0.8em;color:var(--accent2)">artifact.me</code> gives you name, email, team, Slack handle, and SSO groups — no auth code ever.</p>
+        <div class="feature-code">artifact.me.email / .name / .team</div>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon">🤖</div>
+        <h3>AI proxy</h3>
+        <p>Streaming LLM calls and image generation. API keys live on the server; per-user cost attribution and quotas are automatic.</p>
+        <div class="feature-code">artifact.ai.chat([…], { stream: true })</div>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon">📁</div>
+        <h3>File uploads</h3>
+        <p>Upload files from the browser; get back a served URL. Stored in S3/GCS/MinIO. Executable types blocked at the server.</p>
+        <div class="feature-code">artifact.files.upload(file) → { url }</div>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon">⚡</div>
+        <h3>WebSockets &amp; presence</h3>
+        <p>Named rooms, identity-attached presence, multiplayer. Build live polls, collaborative cursors, and games in one line.</p>
+        <div class="feature-code">artifact.ws.room('lobby').send(…)</div>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon">🔍</div>
+        <h3>Warehouse queries</h3>
+        <p>Read-only SQL against BigQuery, Snowflake, or Postgres replicas. SELECT-only parser, dataset allowlist, row limit.</p>
+        <div class="feature-code">artifact.warehouse.query('SELECT …')</div>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon">🔔</div>
+        <h3>Slack notifications</h3>
+        <p>Post to Slack channels from client code. Webhook URL lives on the server; channel allowlist enforced.</p>
+        <div class="feature-code">artifact.notify.slack('#ops', 'Approved!')</div>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon">🔑</div>
+        <h3>Key-value store</h3>
+        <p>Lightweight per-site key-value storage for preferences, state, and config. Simple get/set API.</p>
+        <div class="feature-code">artifact.kv.set('theme', 'dark')</div>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon">🤝</div>
+        <h3>Cross-site reads</h3>
+        <p>In trust mode, read another site's collection in one line. Build shared dashboards and data ecosystems.</p>
+        <div class="feature-code">db.collection('posts', { site: 'blog' })</div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ─── SDK Code tabs ─────────────────────────────── -->
+<section class="section" style="padding-top:0">
+  <div class="container">
+    <div class="section-label">SDK examples</div>
+    <h2 class="section-title">One script tag. Every primitive.</h2>
+    <p class="section-sub">Drop <code style="color:var(--accent2)">&lt;script src="/artifact.js"&gt;&lt;/script&gt;</code> into any HTML file deployed on Artifact.</p>
+
+    <div style="margin-top:2.5rem">
+      <div class="tabs" id="sdk-tabs">
+        <button class="tab active" onclick="showTab('db')">Database</button>
+        <button class="tab" onclick="showTab('realtime')">Realtime</button>
+        <button class="tab" onclick="showTab('ai')">AI</button>
+        <button class="tab" onclick="showTab('ws')">WebSockets</button>
+        <button class="tab" onclick="showTab('identity')">Identity</button>
+      </div>
+
+      <div id="tab-db" class="tab-pane active">
+        <div class="code-block"><span class="cm">// Firebase-style documents, server stamps site + user</span>
+<span class="kw">const</span> posts = <span class="obj">artifact</span>.<span class="fn">db</span>.<span class="fn">collection</span>(<span class="str">'posts'</span>);
+
+<span class="cm">// Create</span>
+<span class="kw">const</span> doc = <span class="kw">await</span> posts.<span class="fn">create</span>({ title: <span class="str">'Hello'</span>, body: <span class="str">'World'</span> });
+<span class="cm">// → { id, site, created_by, created_at, data: { title, body } }</span>
+
+<span class="cm">// List with ordering</span>
+<span class="kw">const</span> all = <span class="kw">await</span> posts.<span class="fn">list</span>({ order: <span class="str">'-created_at'</span>, limit: <span class="num">50</span> });
+
+<span class="cm">// Update &amp; delete</span>
+<span class="kw">await</span> posts.<span class="fn">update</span>(doc.id, { title: <span class="str">'Updated'</span> });
+<span class="kw">await</span> posts.<span class="fn">delete</span>(doc.id);
+
+<span class="cm">// Cross-site read (trust mode)</span>
+<span class="kw">const</span> shared = <span class="obj">artifact</span>.<span class="fn">db</span>.<span class="fn">collection</span>(<span class="str">'posts'</span>, { site: <span class="str">'team-blog'</span> });
+</div>
+      </div>
+
+      <div id="tab-realtime" class="tab-pane">
+        <div class="code-block"><span class="cm">// Subscribe to realtime changes over WebSocket</span>
+<span class="kw">const</span> votes = <span class="obj">artifact</span>.<span class="fn">db</span>.<span class="fn">collection</span>(<span class="str">'votes'</span>);
+
+<span class="cm">// Subscribe — auto-reconnects, replays on reconnect</span>
+<span class="kw">const</span> off = votes.<span class="fn">subscribe</span>({
+  <span class="fn">onCreate</span>: (doc) =&gt; renderVote(doc),
+  <span class="fn">onUpdate</span>: (doc) =&gt; updateBar(doc),
+  <span class="fn">onDelete</span>: (doc) =&gt; removeItem(doc.id),
+});
+
+<span class="cm">// Create from another user — every subscriber fires immediately</span>
+<span class="kw">await</span> votes.<span class="fn">create</span>({ option: <span class="str">'Pizza'</span>, voter: <span class="obj">artifact</span>.me.email });
+
+<span class="cm">// Unsubscribe</span>
+off();
+</div>
+      </div>
+
+      <div id="tab-ai" class="tab-pane">
+        <div class="code-block"><span class="cm">// Keys live on the server — never in client code</span>
+
+<span class="cm">// Streaming chat</span>
+<span class="kw">const</span> stream = <span class="kw">await</span> <span class="obj">artifact</span>.<span class="fn">ai</span>.<span class="fn">chat</span>([
+  { role: <span class="str">'user'</span>, content: <span class="str">'Summarize this week in one paragraph'</span> }
+], { stream: <span class="kw">true</span> });
+
+<span class="kw">for await</span> (<span class="kw">const</span> chunk <span class="kw">of</span> stream) {
+  output.textContent += chunk;
+}
+
+<span class="cm">// Image generation</span>
+<span class="kw">const</span> img = <span class="kw">await</span> <span class="obj">artifact</span>.<span class="fn">ai</span>.<span class="fn">image</span>(<span class="str">'a watercolor fox at sunset'</span>);
+document.<span class="fn">getElementById</span>(<span class="str">'preview'</span>).src = img.url;
+<span class="cm">// → Served URL, stored on your object storage</span>
+</div>
+      </div>
+
+      <div id="tab-ws" class="tab-pane">
+        <div class="code-block"><span class="cm">// Named rooms with identity-attached presence</span>
+<span class="kw">const</span> room = <span class="obj">artifact</span>.<span class="fn">ws</span>.<span class="fn">room</span>(<span class="str">'all-hands'</span>);
+
+<span class="cm">// Receive messages from anyone in the room</span>
+room.<span class="fn">on</span>(<span class="str">'message'</span>, (msg) =&gt; {
+  console.<span class="fn">log</span>(msg.from.name, msg.payload); <span class="cm">// identity is server-stamped</span>
+});
+
+<span class="cm">// Send to everyone in the room</span>
+room.<span class="fn">send</span>({ action: <span class="str">'vote'</span>, choice: <span class="str">'yes'</span> });
+
+<span class="cm">// Presence — who's online right now</span>
+room.presence.<span class="fn">subscribe</span>((users) =&gt; {
+  console.<span class="fn">log</span>(<span class="str">`${users.length} people online`</span>);
+});
+</div>
+      </div>
+
+      <div id="tab-identity" class="tab-pane">
+        <div class="code-block"><span class="cm">// Identity flows from your SSO — no auth code needed</span>
+<span class="kw">await</span> <span class="obj">artifact</span>.<span class="fn">ready</span>();
+
+console.<span class="fn">log</span>(<span class="obj">artifact</span>.me);
+<span class="cm">// {</span>
+<span class="cm">//   email:  "alice@corp.com",</span>
+<span class="cm">//   name:   "Alice Chen",</span>
+<span class="cm">//   title:  "Senior Engineer",</span>
+<span class="cm">//   team:   "Platform",</span>
+<span class="cm">//   slack:  "@alice",</span>
+<span class="cm">//   groups: ["employees", "platform-team", "on-call"]</span>
+<span class="cm">// }</span>
+
+<span class="cm">// Server always stamps documents with creator identity</span>
+<span class="cm">// — clients can never forge who created something</span>
+<span class="kw">const</span> doc = <span class="kw">await</span> <span class="obj">artifact</span>.<span class="fn">db</span>.<span class="fn">collection</span>(<span class="str">'feedback'</span>).<span class="fn">create</span>({ text: <span class="str">'Great demo!'</span> });
+console.<span class="fn">log</span>(doc.created_by); <span class="cm">// "alice@corp.com" — server-stamped</span>
+</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─── How it works ──────────────────────────────── -->
+<section class="section" style="background:var(--bg2); border-top:1px solid var(--border); border-bottom:1px solid var(--border)">
+  <div class="container">
+    <div class="section-label">Architecture</div>
+    <h2 class="section-title">One binary, wildcard DNS, done</h2>
+    <p class="section-sub">No microservices. No orchestration. A single Go binary runs the entire product on a 2 vCPU VM.</p>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:4rem;align-items:start;margin-top:3rem">
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">1</div>
+          <h3>Point wildcard DNS</h3>
+          <p>Add <code style="font-size:0.82em;color:var(--accent2)">*.artifact.corp.com → internal-lb</code> to your DNS. One entry serves all sites.</p>
+        </div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <h3>Authenticate with your IdP</h3>
+          <p>Artifact speaks OIDC directly to Okta, Entra, or Google Workspace — or trusts headers from your IAP/Pomerium proxy.</p>
+        </div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <h3>Deploy a folder of HTML</h3>
+          <p><code style="font-size:0.82em;color:var(--accent2)">artifact deploy</code> uploads files → writes manifest → flips atomic pointer. Never serves half a site.</p>
+        </div>
+        <div class="step">
+          <div class="step-num">4</div>
+          <h3>SDK auto-wires</h3>
+          <p>Every request carries a verified session cookie. The SDK makes same-origin calls — no keys, no auth code, no CORS.</p>
+        </div>
+      </div>
+      <div>
+        <div class="arch-diagram">
+          <div style="font-size:0.78rem;color:var(--text2);margin-bottom:1.2rem;font-weight:600;text-transform:uppercase;letter-spacing:0.07em">Runtime</div>
+          <div class="arch-row">
+            <span class="arch-pill">*.artifact.corp.com</span>
+            <span class="arch-arrow">──▶</span>
+            <span class="arch-pill">artifact binary</span>
+          </div>
+          <div class="arch-group">
+            <div class="arch-group-label">Every request</div>
+            <div class="arch-row"><span class="arch-arrow">├─</span><span class="arch-pill">auth (OIDC | header-trust | dev)</span></div>
+            <div class="arch-row"><span class="arch-arrow">├─</span><span class="arch-pill">subdomain → site folder</span></div>
+            <div class="arch-row"><span class="arch-arrow">├─</span><span class="arch-pill">/api/v1/* → Postgres/SQLite</span></div>
+            <div class="arch-row"><span class="arch-arrow">├─</span><span class="arch-pill">/api/v1/ai → upstream gateway</span></div>
+            <div class="arch-row"><span class="arch-arrow">├─</span><span class="arch-pill">/api/v1/warehouse → read-only</span></div>
+            <div class="arch-row"><span class="arch-arrow">└─</span><span class="arch-pill">/ws → in-process WS hub</span></div>
+          </div>
+          <div class="arch-group">
+            <div class="arch-group-label">Storage</div>
+            <div class="arch-row"><span class="arch-pill">S3 / GCS / MinIO / local</span></div>
+          </div>
+          <div style="font-size:0.8rem;color:var(--text2);margin-top:1rem">
+            Multi-replica: add NATS + external Postgres.<br>
+            Dev mode: SQLite + local disk + fake identity.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─── Quickstart ────────────────────────────────── -->
+<section class="section">
+  <div class="container">
+    <div class="section-label">Get started</div>
+    <h2 class="section-title">Running in under 60 seconds</h2>
+    <div style="max-width:720px">
+      <div class="quickstart">
+        <div class="quickstart-steps">
+          <div class="qs-step">
+            <div class="qs-num">1</div>
+            <div>
+              <h4>Install</h4>
+              <div class="code-block"><span class="t-prompt">$</span> curl -fsSL https://raw.githubusercontent.com/artifact/artifact/main/scripts/install.sh | sh</div>
+            </div>
+          </div>
+          <div class="qs-step">
+            <div class="qs-num">2</div>
+            <div>
+              <h4>Start the dev server</h4>
+              <div class="code-block"><span class="t-prompt">$</span> artifact dev
+<span style="color:var(--green)">▶ </span><span style="color:var(--text2)">http://&lt;site&gt;.localhost:8443 · auth: dev@localhost</span></div>
+            </div>
+          </div>
+          <div class="qs-step">
+            <div class="qs-num">3</div>
+            <div>
+              <h4>Create and deploy a site</h4>
+              <div class="code-block"><span class="t-prompt">$</span> artifact init lunch-poll
+<span class="t-prompt">$</span> cd lunch-poll &amp;&amp; artifact deploy
+<span style="color:var(--green)">✓ </span>http://lunch-poll.localhost:8443</div>
+            </div>
+          </div>
+          <div class="qs-step">
+            <div class="qs-num">4</div>
+            <div>
+              <h4>Edit index.html and redeploy</h4>
+              <div class="code-block"><span class="t-comment">&lt;!-- index.html --&gt;</span>
+&lt;<span style="color:var(--red)">script</span> src=<span class="str">"/artifact.js"</span>&gt;&lt;/<span style="color:var(--red)">script</span>&gt;
+&lt;<span style="color:var(--red)">script</span>&gt;
+  <span class="kw">await</span> artifact.ready();
+  <span class="kw">const</span> votes = artifact.db.collection(<span class="str">'votes'</span>);
+  votes.subscribe({ onCreate: (v) =&gt; render(v) });
+&lt;/<span style="color:var(--red)">script</span>&gt;</div>
+            </div>
+          </div>
+        </div>
+        <div style="margin-top:2rem;padding-top:1.5rem;border-top:1px solid rgba(99,102,241,0.2)">
+          <a class="btn btn-primary" href="docs/getting-started.html">Full getting started guide →</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─── Comparison ────────────────────────────────── -->
+<section class="section" style="background:var(--bg2);border-top:1px solid var(--border);border-bottom:1px solid var(--border)">
+  <div class="container">
+    <div class="section-label">Comparison</div>
+    <h2 class="section-title">Why not just use…</h2>
+    <table class="compare-table">
+      <thead>
+        <tr>
+          <th>Capability</th>
+          <th>Artifact</th>
+          <th>Retool/Appsmith</th>
+          <th>DIY deploy (K8s/ECS)</th>
+          <th>Notion / Spreadsheet</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Deploy speed</td>
+          <td class="highlight-col"><span class="check">✓</span> 30 seconds</td>
+          <td><span class="partial">~</span> Minutes, UI-based</td>
+          <td><span class="cross">✗</span> Hours / ticket</td>
+          <td><span class="check">✓</span> Instant</td>
+        </tr>
+        <tr>
+          <td>Custom HTML / code</td>
+          <td class="highlight-col"><span class="check">✓</span> Any HTML</td>
+          <td><span class="partial">~</span> Drag-and-drop only</td>
+          <td><span class="check">✓</span> Yes</td>
+          <td><span class="cross">✗</span> No</td>
+        </tr>
+        <tr>
+          <td>AI in client code</td>
+          <td class="highlight-col"><span class="check">✓</span> Zero-config proxy</td>
+          <td><span class="partial">~</span> Connector required</td>
+          <td><span class="cross">✗</span> You build it</td>
+          <td><span class="cross">✗</span> No</td>
+        </tr>
+        <tr>
+          <td>Realtime / WebSockets</td>
+          <td class="highlight-col"><span class="check">✓</span> One line</td>
+          <td><span class="cross">✗</span> Not available</td>
+          <td><span class="cross">✗</span> You build it</td>
+          <td><span class="cross">✗</span> No</td>
+        </tr>
+        <tr>
+          <td>Self-hostable</td>
+          <td class="highlight-col"><span class="check">✓</span> Apache-2.0</td>
+          <td><span class="partial">~</span> Paid tiers</td>
+          <td><span class="check">✓</span> Yes</td>
+          <td><span class="cross">✗</span> SaaS only</td>
+        </tr>
+        <tr>
+          <td>Identity included</td>
+          <td class="highlight-col"><span class="check">✓</span> OIDC + header-trust</td>
+          <td><span class="check">✓</span> Via SSO</td>
+          <td><span class="cross">✗</span> You build it</td>
+          <td><span class="check">✓</span> Google/MS auth</td>
+        </tr>
+        <tr>
+          <td>Agent-native (MCP)</td>
+          <td class="highlight-col"><span class="check">✓</span> Built-in</td>
+          <td><span class="cross">✗</span> No</td>
+          <td><span class="cross">✗</span> No</td>
+          <td><span class="cross">✗</span> No</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ─── Deploy at your company ────────────────────── -->
+<section class="section">
+  <div class="container">
+    <div class="section-label">Self-hosting</div>
+    <h2 class="section-title">Deploy at your company in under 30 minutes</h2>
+    <p class="section-sub">Pluggable auth, storage, and database. Runs on a single VM or Kubernetes. Ships with Terraform, Helm, and Docker Compose examples.</p>
+    <div class="deploy-grid">
+      <div class="deploy-card">
+        <div class="icon">🔐</div>
+        <h3>Okta / Entra</h3>
+        <p>OIDC with groups claim. Step-by-step setup guide included.</p>
+      </div>
+      <div class="deploy-card">
+        <div class="icon">🛡️</div>
+        <h3>IAP / Pomerium</h3>
+        <p>Header-trust mode for any identity proxy.</p>
+      </div>
+      <div class="deploy-card">
+        <div class="icon">☁️</div>
+        <h3>GCP</h3>
+        <p>GCS + Cloud SQL + ILB. Terraform included.</p>
+      </div>
+      <div class="deploy-card">
+        <div class="icon">🟠</div>
+        <h3>AWS</h3>
+        <p>S3 + RDS + ALB. Terraform included.</p>
+      </div>
+      <div class="deploy-card">
+        <div class="icon">⎈</div>
+        <h3>Kubernetes</h3>
+        <p>Helm chart with NATS for multi-replica.</p>
+      </div>
+      <div class="deploy-card">
+        <div class="icon">🐋</div>
+        <h3>Docker Compose</h3>
+        <p>Postgres + MinIO + Artifact. One command.</p>
+      </div>
+    </div>
+    <div style="margin-top:2.5rem">
+      <a class="btn btn-primary" href="docs/self-hosting.html">Self-hosting guide →</a>
+      <a class="btn btn-ghost" style="margin-left:0.75rem" href="docs/auth.html">Auth setup →</a>
+    </div>
+  </div>
+</section>
+
+<!-- ─── FAQ ───────────────────────────────────────── -->
+<section class="section" style="background:var(--bg2);border-top:1px solid var(--border);border-bottom:1px solid var(--border)">
+  <div class="container" style="max-width:760px">
+    <div class="section-label">FAQ</div>
+    <h2 class="section-title">Common questions</h2>
+    <div style="margin-top:2rem">
+      <div class="faq-item">
+        <div class="faq-q">Why no custom backends or cron? <span>+</span></div>
+        <div class="faq-a">Custom backends mean per-site servers, on-call ownership, and a security review for every throwaway tool. Artifact's bet: a fixed set of primitives covers 95% of internal apps when you're already inside the trust bubble. When something feels missing, the answer is almost always "combine two SDK primitives."</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q">How is this different from Shopify's Quick? <span>+</span></div>
+        <div class="faq-a">Quick is welded to Shopify's GCP + IAP stack. Artifact is the same idea rebuilt on pluggable parts — Okta or Entra or Google OIDC, S3 or GCS or MinIO, Postgres or SQLite — Apache-2.0, self-hostable by any company.</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q">Can I expose a site to the public internet? <span>+</span></div>
+        <div class="faq-a">No, and this is intentional. Artifact is designed for internal-only deployment behind corporate SSO. The trust bubble assumption is what makes the primitives safe and simple. Never put Artifact on a public ingress.</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q">How does it scale? <span>+</span></div>
+        <div class="faq-a">A single 2 vCPU / 4 GB VM comfortably serves a 5,000-person company for static hosting and API calls. For multi-replica: external Postgres + NATS pubsub + sticky sessions, all documented in the Helm chart values.</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q">How do coding agents use this? <span>+</span></div>
+        <div class="faq-a"><code style="font-size:0.85em;color:var(--accent2)">artifact init</code> drops a <code style="font-size:0.85em;color:var(--accent2)">CLAUDE.md</code> / <code style="font-size:0.85em;color:var(--accent2)">AGENTS.md</code> skill file so Claude Code and other agents know the full SDK without reading docs. <code style="font-size:0.85em;color:var(--accent2)">artifact mcp</code> exposes deploy, list, logs, and query_db as MCP tools — so "build a live voting app and ship it" is a single prompt.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─── CTA ───────────────────────────────────────── -->
+<section class="section">
+  <div class="container" style="text-align:center">
+    <h2 class="section-title" style="margin-bottom:1rem">Every company deserves a Quick</h2>
+    <p class="section-sub" style="margin: 0 auto 2.5rem">AI made building trivial. Sharing is now the bottleneck. Artifact removes it — inside the trust bubble you already have.</p>
+    <div style="display:flex;gap:1rem;justify-content:center;flex-wrap:wrap">
+      <a class="btn btn-primary" href="docs/getting-started.html">Get started →</a>
+      <a class="btn btn-ghost" href="https://github.com/artifact/artifact">Star on GitHub</a>
+    </div>
+    <div class="badges" style="justify-content:center;margin-top:2rem">
+      <span class="badge"><span class="badge-dot" style="background:#6366f1"></span>Apache-2.0</span>
+      <span class="badge"><span class="badge-dot" style="background:#34d399"></span>Go 1.23+</span>
+      <span class="badge"><span class="badge-dot" style="background:#fbbf24"></span>Single binary</span>
+      <span class="badge"><span class="badge-dot" style="background:#f87171"></span>No cloud lock-in</span>
+    </div>
+  </div>
+</section>
+
+<!-- ─── Footer ────────────────────────────────────── -->
+<footer class="footer">
+  <div class="container">
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <a class="nav-logo" href="/" style="font-size:1.2rem">Artifact<span>.</span></a>
+        <p>Open-source internal hosting platform. The generalized, self-hostable version of Shopify's Quick.</p>
+      </div>
+      <div class="footer-col">
+        <h4>Docs</h4>
+        <a href="docs/getting-started.html">Getting started</a>
+        <a href="docs/sdk-reference.html">SDK reference</a>
+        <a href="docs/cli-reference.html">CLI reference</a>
+        <a href="docs/concepts.html">Concepts</a>
+      </div>
+      <div class="footer-col">
+        <h4>Deploy</h4>
+        <a href="docs/self-hosting.html">Self-hosting</a>
+        <a href="docs/auth.html">Auth setup</a>
+        <a href="docs/governance.html">Governance</a>
+        <a href="docs/ai-setup.html">AI gateway</a>
+      </div>
+      <div class="footer-col">
+        <h4>Project</h4>
+        <a href="https://github.com/artifact/artifact">GitHub</a>
+        <a href="https://github.com/artifact/artifact/releases">Releases</a>
+        <a href="https://github.com/artifact/artifact/blob/main/CONTRIBUTING.md">Contributing</a>
+        <a href="https://github.com/artifact/artifact/blob/main/SECURITY.md">Security</a>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>© 2026 Artifact Contributors — Apache-2.0</span>
+      <span>Inspired by Shopify's Quick</span>
+    </div>
+  </div>
+</footer>
+
+<script>
+function showTab(id) {
+  document.querySelectorAll('.tab').forEach((t, i) => {
+    const ids = ['db','realtime','ai','ws','identity'];
+    t.classList.toggle('active', ids[i] === id);
+  });
+  document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+  document.getElementById('tab-' + id).classList.add('active');
+}
+</script>
+</body>
+</html>

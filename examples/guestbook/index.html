@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Guestbook</title>
+  <script src="/artifact.js"></script>
+  <style>
+    body { font-family: system-ui; max-width: 600px; margin: 2rem auto; padding: 0 1rem; }
+    h1 { font-weight: 600; }
+    .entry { background: #f9f9f9; border-radius: 8px; padding: 1rem; margin: 0.5rem 0; }
+    .meta { color: #888; font-size: 0.85rem; }
+    form { display: flex; gap: 0.5rem; margin: 1rem 0; }
+    input { flex: 1; padding: 0.5rem; border: 1px solid #ddd; border-radius: 6px; }
+    button { padding: 0.5rem 1rem; background: #2563eb; color: #fff; border: none; border-radius: 6px; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <h1>Guestbook</h1>
+  <p>Signed in as <strong id="user"></strong></p>
+  <form id="form">
+    <input type="text" id="message" placeholder="Leave a message…" required />
+    <button type="submit">Sign</button>
+  </form>
+  <div id="entries"></div>
+  <script>
+    const posts = artifact.db.collection('entries');
+    artifact.ready().then(async () => {
+      document.getElementById('user').textContent = artifact.me.name;
+      await load();
+      posts.subscribe({ onCreate: () => load() });
+    });
+    document.getElementById('form').onsubmit = async (e) => {
+      e.preventDefault();
+      const msg = document.getElementById('message').value;
+      await posts.create({ message: msg, author: artifact.me.name });
+      document.getElementById('message').value = '';
+    };
+    async function load() {
+      const entries = await posts.list({ order: '-created_at', limit: 50 });
+      document.getElementById('entries').innerHTML = entries.map(e => `
+        <div class="entry">
+          <div>${e.data.message}</div>
+          <div class="meta">${e.data.author} · ${new Date(e.created_at).toLocaleString()}</div>
+        </div>
+      `).join('');
+    }
+  </script>
+</body>
+</html>

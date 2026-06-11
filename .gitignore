@@ -1,0 +1,18 @@
+bin/
+.artifact-data/
+.atrium-data/
+*.db
+*.db-*
+dist/
+node_modules/
+sdk/dist/
+.DS_Store
+*.tar.gz
+
+# Scratch / dev folders
+my-test/
+demo-site/
+
+# Internal planning docs
+atrium-one-pager.md
+atrium-use-cases.md

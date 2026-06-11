@@ -1,0 +1,44 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-artifact
+  labels:
+    app: artifact
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: artifact
+  template:
+    metadata:
+      labels:
+        app: artifact
+    spec:
+      containers:
+        - name: artifact
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - containerPort: 8443
+          env:
+            - name: ARTIFACT_DATABASE_URL
+              value: {{ .Values.externalDatabase.url | quote }}
+            - name: ARTIFACT_S3_ACCESS_KEY
+              value: {{ .Values.externalS3.accessKey | quote }}
+            - name: ARTIFACT_S3_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-s3
+                  key: secretKey
+                  optional: true
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8443
+            initialDelaySeconds: 5
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8443

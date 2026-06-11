@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Multiplayer Cursors</title>
+  <script src="/artifact.js"></script>
+  <style>
+    body { margin: 0; overflow: hidden; cursor: none; background: #1a1a2e; color: #fff; font-family: system-ui; }
+    .cursor { position: fixed; pointer-events: none; font-size: 12px; z-index: 100; }
+    .cursor::before { content: '▶'; color: var(--color); }
+    .label { background: var(--color); padding: 2px 6px; border-radius: 4px; margin-left: 12px; }
+    #info { position: fixed; top: 1rem; left: 1rem; opacity: 0.7; }
+  </style>
+</head>
+<body>
+  <div id="info">Move your mouse — others see your cursor</div>
+  <div id="cursors"></div>
+  <script>
+    const COLORS = ['#ef4444','#22c55e','#3b82f6','#f59e0b','#a855f7'];
+    const room = artifact.ws.room('cursors');
+    const cursors = {};
+    let myColor = COLORS[Math.floor(Math.random() * COLORS.length)];
+    artifact.ready().then(() => {
+      document.getElementById('info').textContent = `${artifact.me.name} · move your mouse`;
+      room.presence.subscribe(users => {});
+      room.on('message', msg => {
+        if (msg.type === 'message' && msg.from.email !== artifact.me.email) {
+          showCursor(msg.from.email, msg.from.name, msg.payload.x, msg.payload.y);
+        }
+      });
+    });
+    document.addEventListener('mousemove', e => {
+      room.send({ x: e.clientX, y: e.clientY });
+    });
+    function showCursor(id, name, x, y) {
+      if (!cursors[id]) {
+        const el = document.createElement('div');
+        el.className = 'cursor';
+        el.style.setProperty('--color', COLORS[Object.keys(cursors).length % COLORS.length]);
+        el.innerHTML = `<span class="label">${name}</span>`;
+        document.getElementById('cursors').appendChild(el);
+        cursors[id] = el;
+      }
+      cursors[id].style.left = x + 'px';
+      cursors[id].style.top = y + 'px';
+    }
+  </script>
+</body>
+</html>

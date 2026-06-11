@@ -1,0 +1,61 @@
+branding:
+  name: Artifact
+  logo: ""
+
+domain: artifact.corp.example.com
+listen: ":8443"
+
+tls:
+  mode: off  # off when behind corp LB/ZTNA
+
+auth:
+  mode: dev  # oidc | header-trust | dev
+  oidc:
+    issuer: https://corp.okta.com
+    client_id: ""
+    client_secret_env: ARTIFACT_OIDC_SECRET
+    groups_claim: groups
+  header_trust:
+    email_header: X-Auth-Request-Email
+    name_header: X-Auth-Request-User
+    proxy_secret_env: ARTIFACT_PROXY_SECRET
+
+storage:
+  driver: local  # s3 | gcs | local
+  bucket: artifact-sites
+  endpoint: ""
+  path: .artifact-data
+
+database:
+  driver: sqlite  # postgres | sqlite
+  url_env: ARTIFACT_DATABASE_URL
+  url: .artifact-data/artifact.db
+
+ai:
+  upstream_url: https://gateway.corp.com/v1
+  api_key_env: ARTIFACT_AI_KEY
+  image_model: ""
+  models_allowlist: []
+
+warehouse:
+  driver: none  # bigquery | snowflake | postgres | none
+  credentials_env: ARTIFACT_WAREHOUSE_CREDS
+  allowed_datasets: []
+  row_limit: 10000
+
+notify:
+  slack:
+    mode: off  # webhook | bot | off
+    secret_env: ARTIFACT_SLACK_SECRET
+    channel_allowlist: []
+
+governance:
+  mode: trust  # trust | governed
+  quotas:
+    site_max_mb: 500
+    db_max_docs_per_site: 100000
+    upload_max_mb: 50
+    ai_daily_tokens_per_user: 0
+    warehouse_daily_queries_per_user: 200
+
+data_dir: .artifact-data

@@ -1,0 +1,72 @@
+package server
+
+import (
+	"bytes"
+	"context"
+	"net/http"
+	"net/http/httptest"
+	"path/filepath"
+	"testing"
+
+	"github.com/siddharthsambharia-portkey/artifacts/internal/auth"
+	"github.com/siddharthsambharia-portkey/artifacts/internal/config"
+	"github.com/siddharthsambharia-portkey/artifacts/internal/db"
+	"github.com/siddharthsambharia-portkey/artifacts/internal/governance"
+	"github.com/siddharthsambharia-portkey/artifacts/internal/realtime"
+)
+
+func TestAPICreateAndList(t *testing.T) {
+	tmp := t.TempDir()
+	cfg := config.DefaultDev()
+	cfg.DataDir = filepath.Join(tmp, "data")
+	cfg.Database.URL = filepath.Join(tmp, "data", "test.db")
+	database, err := db.Open(cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	database.Migrate(context.Background())
+	hub := realtime.NewHub(cfg)
+	api := NewAPI(cfg, database, governance.New(cfg), hub)
+
+	tests := []struct {
+		name       string
+		method     string
+		path       string
+		body       string
+		wantStatus int
+	}{
+		{"create entry", "POST", "/api/v1/db/entries", `{"message":"hi"}`, http.StatusOK},
+		{"invalid json", "POST", "/api/v1/db/entries", `{bad`, http.StatusBadRequest},
+		{"list entries", "GET", "/api/v1/db/entries", "", http.StatusOK},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var req *http.Request
+			if tt.body != "" {
+				req = httptest.NewRequest(tt.method, tt.path, bytes.NewReader([]byte(tt.body)))
+			} else {
+				req = httptest.NewRequest(tt.method, tt.path, nil)
+			}
+			req.Host = "guestbook.localhost:8443"
+			req = req.WithContext(auth.WithUser(req.Context(), auth.DevUser))
+			w := httptest.NewRecorder()
+			switch tt.method {
+			case "POST":
+				api.handleCreate(w, req)
+			case "GET":
+				api.handleList(w, req)
+			}
+			if w.Code != tt.wantStatus {
+				t.Fatalf("status %d body %s", w.Code, w.Body.String())
+			}
+		})
+	}
+}
+
+func TestGenerateIDUnique(t *testing.T) {
+	a := generateID()
+	b := generateID()
+	if a == b {
+		t.Fatal("expected unique ids")
+	}
+}

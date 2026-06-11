@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Live Poll</title>
+  <script src="/artifact.js"></script>
+  <style>
+    body { font-family: system-ui; max-width: 500px; margin: 3rem auto; text-align: center; }
+    .bar { background: #e5e7eb; border-radius: 8px; margin: 0.5rem 0; overflow: hidden; }
+    .fill { background: #2563eb; color: #fff; padding: 0.5rem; transition: width 0.3s; text-align: left; }
+    button { margin: 0.25rem; padding: 0.75rem 1.5rem; border: none; border-radius: 8px; background: #2563eb; color: #fff; cursor: pointer; font-size: 1rem; }
+  </style>
+</head>
+<body>
+  <h1>What's for lunch?</h1>
+  <div id="options"></div>
+  <div id="results"></div>
+  <script>
+    const votes = artifact.db.collection('votes');
+    const OPTIONS = ['Pizza', 'Sushi', 'Tacos', 'Salad'];
+    artifact.ready().then(() => {
+      renderOptions();
+      load();
+      votes.subscribe({ onCreate: load, onUpdate: load });
+    });
+    function renderOptions() {
+      document.getElementById('options').innerHTML = OPTIONS.map(o =>
+        `<button onclick="vote('${o}')">${o}</button>`
+      ).join('');
+    }
+    async function vote(option) {
+      await votes.create({ option, voter: artifact.me.email });
+    }
+    async function load() {
+      const all = await votes.list({ limit: 1000 });
+      const counts = {};
+      OPTIONS.forEach(o => counts[o] = 0);
+      all.forEach(v => { if (counts[v.data.option] !== undefined) counts[v.data.option]++; });
+      const max = Math.max(...Object.values(counts), 1);
+      document.getElementById('results').innerHTML = OPTIONS.map(o => `
+        <div class="bar"><div class="fill" style="width:${counts[o]/max*100}%">${o}: ${counts[o]}</div></div>
+      `).join('');
+    }
+  </script>
+</body>
+</html>

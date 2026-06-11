@@ -1,0 +1,32 @@
+branding:
+  name: Artifact
+domain: localhost
+listen: ":8443"
+tls:
+  mode: off
+auth:
+  mode: dev
+storage:
+  driver: s3
+  bucket: artifact-sites
+  endpoint: minio:9000
+database:
+  driver: postgres
+  url_env: ARTIFACT_DATABASE_URL
+ai:
+  upstream_url: ""
+  api_key_env: ARTIFACT_AI_KEY
+warehouse:
+  driver: none
+notify:
+  slack:
+    mode: off
+governance:
+  mode: trust
+  quotas:
+    site_max_mb: 500
+    db_max_docs_per_site: 100000
+    upload_max_mb: 50
+    ai_daily_tokens_per_user: 50000
+    warehouse_daily_queries_per_user: 200
+data_dir: /var/lib/artifact

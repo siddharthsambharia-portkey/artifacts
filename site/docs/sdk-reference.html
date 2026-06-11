@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SDK Reference — Artifact Docs</title>
+  <link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-inner">
+    <a class="nav-logo" href="../index.html">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect width="20" height="20" rx="5" fill="#6366f1"/><path d="M5 14l5-8 5 8" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M7.5 11h5" stroke="white" stroke-width="1.8" stroke-linecap="round"/></svg>
+      Artifact<span>.</span>
+    </a>
+    <div class="nav-links">
+      <a href="index.html">Docs</a>
+      <a href="getting-started.html">Getting started</a>
+      <a href="sdk-reference.html" style="color:var(--text)">SDK</a>
+      <a href="self-hosting.html">Self-hosting</a>
+      <a href="https://github.com/artifact/artifact">GitHub</a>
+      <a class="nav-cta" href="getting-started.html">Get started →</a>
+    </div>
+  </div>
+</nav>
+
+<div class="docs-layout">
+  <aside class="docs-sidebar">
+    <div class="sidebar-section">
+      <h4>Getting started</h4>
+      <a href="getting-started.html">Quickstart</a>
+      <a href="concepts.html">Concepts</a>
+    </div>
+    <div class="sidebar-section">
+      <h4>SDK reference</h4>
+      <a href="sdk-reference.html" class="active">Overview</a>
+      <a href="#identity">Identity (artifact.me)</a>
+      <a href="#database">Database</a>
+      <a href="#realtime">Realtime / subscribe</a>
+      <a href="#kv">Key-value</a>
+      <a href="#ai">AI proxy</a>
+      <a href="#files">Files</a>
+      <a href="#websockets">WebSockets</a>
+      <a href="#warehouse">Warehouse</a>
+      <a href="#notify">Notify (Slack)</a>
+    </div>
+    <div class="sidebar-section">
+      <h4>CLI reference</h4>
+      <a href="cli-reference.html">All commands</a>
+    </div>
+    <div class="sidebar-section">
+      <h4>Self-hosting</h4>
+      <a href="self-hosting.html">Overview</a>
+      <a href="auth.html">Auth setup</a>
+      <a href="governance.html">Governance</a>
+      <a href="ai-setup.html">AI gateway</a>
+      <a href="warehouse.html">Warehouse</a>
+    </div>
+  </aside>
+
+  <main class="docs-content">
+    <div class="breadcrumb"><a href="../index.html">Artifact</a><span>›</span><a href="index.html">Docs</a><span>›</span><span>SDK reference</span></div>
+    <h1>SDK reference</h1>
+    <p class="lead">The Artifact browser SDK is a single JavaScript file served at <code class="inline-code">/artifact.js</code> by every Artifact server. It exposes all platform primitives — database, AI, files, WebSockets, and more — via a zero-config API.</p>
+
+    <h2>Loading the SDK</h2>
+    <div class="code-block">&lt;script src="/artifact.js"&gt;&lt;/script&gt;</div>
+    <p>That's it. No npm, no bundler, no environment variables. The SDK is automatically available as the global <code class="inline-code">artifact</code> object.</p>
+
+    <h3>artifact.ready()</h3>
+    <p>Call <code class="inline-code">await artifact.ready()</code> before accessing <code class="inline-code">artifact.me</code> or making API calls. It fetches the current user session from the server.</p>
+    <div class="code-block">await artifact.ready();
+console.log(artifact.me); // now populated</div>
+
+    <div class="callout callout-info">
+      <div class="callout-icon">ℹ️</div>
+      <div class="callout-body"><p>Top-level <code class="inline-code">await</code> works in modern browsers when your script tag uses <code class="inline-code">type="module"</code>. For classic scripts, wrap in an async IIFE.</p></div>
+    </div>
+
+    <!-- ─── Identity ─── -->
+    <h2 id="identity">Identity — artifact.me</h2>
+    <p>After <code class="inline-code">await artifact.ready()</code>, <code class="inline-code">artifact.me</code> contains the verified identity of the current employee. This comes from your SSO provider (OIDC) or trusted proxy header — it cannot be spoofed by the client.</p>
+
+    <table>
+      <thead><tr><th>Field</th><th>Type</th><th>Example</th></tr></thead>
+      <tbody>
+        <tr><td><code class="inline-code">artifact.me.email</code></td><td>string</td><td><code class="inline-code">"alice@corp.com"</code></td></tr>
+        <tr><td><code class="inline-code">artifact.me.name</code></td><td>string</td><td><code class="inline-code">"Alice Chen"</code></td></tr>
+        <tr><td><code class="inline-code">artifact.me.groups</code></td><td>string[]</td><td><code class="inline-code">["employees","eng"]</code></td></tr>
+        <tr><td><code class="inline-code">artifact.me.sub</code></td><td>string</td><td>IdP subject identifier</td></tr>
+      </tbody>
+    </table>
+
+    <div class="callout callout-info">
+      <div class="callout-icon">ℹ️</div>
+      <div class="callout-body"><p>In dev mode, <code class="inline-code">artifact.me</code> is <code class="inline-code">{ email: "dev@localhost", name: "Dev User", groups: ["employees"] }</code>.</p></div>
+    </div>
+
+    <!-- ─── Database ─── -->
+    <h2 id="database">Database</h2>
+    <p>Artifact provides document collections backed by Postgres or SQLite. Each document is automatically stamped with the site, creator, and timestamp.</p>
+
+    <h3>artifact.db.collection(name, options?)</h3>
+    <p>Returns a <code class="inline-code">Collection</code> object scoped to the current site (or another site in trust mode).</p>
+    <div class="code-block">const posts = artifact.db.collection('posts');
+
+// Cross-site read (trust mode only)
+const shared = artifact.db.collection('posts', { site: 'team-blog' });</div>
+
+    <h3>collection.create(data)</h3>
+    <div class="code-block">const doc = await posts.create({ title: 'Hello', body: 'World' });
+// Returns:
+// {
+//   id: "01J...",
+//   site: "my-app",
+//   collection: "posts",
+//   created_by: "alice@corp.com",   ← server-stamped, cannot be forged
+//   created_at: "2026-06-11T...",
+//   data: { title: "Hello", body: "World" }
+// }</div>
+
+    <h3>collection.list(options?)</h3>
+    <div class="code-block">const docs = await posts.list({
+  order: '-created_at',   // prefix with - for descending
+  limit: 50,              // max 1000
+  offset: 0,
+});</div>
+
+    <h3>collection.update(id, data)</h3>
+    <div class="code-block">await posts.update(doc.id, { title: 'Updated title' });
+// Merges with existing data (partial update)</div>
+
+    <h3>collection.delete(id)</h3>
+    <div class="code-block">await posts.delete(doc.id);</div>
+
+    <!-- ─── Realtime ─── -->
+    <h2 id="realtime">Realtime — subscribe</h2>
+    <p>Subscribe to live document changes over WebSocket. Callbacks fire for every create, update, and delete in the collection — across all users and sessions.</p>
+
+    <h3>collection.subscribe(handlers)</h3>
+    <div class="code-block">const off = posts.subscribe({
+  onCreate: (doc) => {
+    console.log('New post:', doc.data.title, 'by', doc.created_by);
+  },
+  onUpdate: (doc) => {
+    console.log('Updated:', doc.id);
+  },
+  onDelete: (doc) => {
+    console.log('Deleted:', doc.id);
+  }
+});
+
+// Unsubscribe
+off();</div>
+
+    <div class="callout callout-info">
+      <div class="callout-icon">ℹ️</div>
+      <div class="callout-body"><p>The SDK maintains a single WebSocket per room and automatically reconnects on disconnect. In multi-replica deployments, NATS ensures events reach all replicas.</p></div>
+    </div>
+
+    <!-- ─── KV ─── -->
+    <h2 id="kv">Key-value store</h2>
+    <p>Lightweight, per-site key-value storage. Useful for preferences, feature flags, and per-user state.</p>
+
+    <div class="code-block">// Set a value (any JSON-serializable value)
+await artifact.kv.set('theme', 'dark');
+await artifact.kv.set('onboarding', { step: 3, completed: false });
+
+// Get a value
+const theme = await artifact.kv.get('theme');   // → "dark"
+
+// Scoped to this site; different sites have independent namespaces</div>
+
+    <h3>artifact.kv.set(key, value)</h3>
+    <table>
+      <thead><tr><th>Param</th><th>Type</th><th>Notes</th></tr></thead>
+      <tbody>
+        <tr><td>key</td><td>string</td><td>Max 256 chars</td></tr>
+        <tr><td>value</td><td>any JSON</td><td>Stored as JSON; max 64 KB</td></tr>
+      </tbody>
+    </table>
+
+    <!-- ─── AI ─── -->
+    <h2 id="ai">AI proxy</h2>
+    <p>Proxy for LLM chat completions and image generation. The API key lives on the server — never visible in client code. Usage is attributed to the calling user.</p>
+
+    <div class="callout callout-warn">
+      <div class="callout-icon">⚠️</div>
+      <div class="callout-body"><p>AI must be explicitly enabled by the server admin. If it's not configured, these calls return a 503.</p></div>
+    </div>
+
+    <h3>artifact.ai.chat(messages, options?)</h3>
+    <div class="code-block">// Non-streaming
+const res = await artifact.ai.chat([
+  { role: 'system', content: 'You are a helpful assistant.' },
+  { role: 'user', content: 'Summarize these bullet points: ...' }
+]);
+console.log(res.choices[0].message.content);
+
+// Streaming (async iterable)
+const stream = await artifact.ai.chat(messages, { stream: true });
+for await (const chunk of stream) {
+  output.textContent += chunk;   // chunk is a string delta
+}
+
+// With model override (must be in server allowlist)
+const res = await artifact.ai.chat(messages, { model: 'gpt-4o' });</div>
+
+    <h3>artifact.ai.image(prompt, options?)</h3>
+    <div class="code-block">const result = await artifact.ai.image('a watercolor fox at sunset', {
+  size: '1024x1024',   // default
+  n: 1,               // number of images
+});
+// result.url — a served URL (stored in your object storage)
+img.src = result.url;</div>
+
+    <!-- ─── Files ─── -->
+    <h2 id="files">Files</h2>
+    <p>Upload files from the browser. Files are stored in your configured object store (S3, GCS, MinIO, or local). Executable content types are blocked server-side.</p>
+
+    <h3>artifact.files.upload(file)</h3>
+    <div class="code-block">const input = document.getElementById('file-input');
+input.addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  const result = await artifact.files.upload(file);
+  // result: { id, name, size, content_type, url, created_by, created_at }
+  console.log('Uploaded:', result.url);
+  img.src = result.url;  // immediately serveable
+});</div>
+
+    <h3>artifact.files.list()</h3>
+    <div class="code-block">const files = await artifact.files.list();
+// Returns array of { id, name, size, content_type, url, created_by, created_at }
+files.forEach(f => console.log(f.name, f.url));</div>
+
+    <!-- ─── WebSockets ─── -->
+    <h2 id="websockets">WebSockets</h2>
+    <p>Named rooms with identity-stamped messages. Every message includes the sender's verified identity — clients cannot impersonate others.</p>
+
+    <h3>artifact.ws.room(name)</h3>
+    <div class="code-block">const room = artifact.ws.room('all-hands');
+
+// Listen for messages
+room.on('message', (msg) => {
+  console.log(msg.from.name, '→', msg.payload);
+  // msg.from contains the server-stamped sender identity
+});
+
+// Send to everyone in the room (including yourself)
+room.send({ action: 'raise-hand' });
+
+// Leave and disconnect
+room.close();</div>
+
+    <h3>Presence</h3>
+    <div class="code-block">// Subscribe to who's in the room
+room.presence.subscribe((users) => {
+  header.textContent = `${users.length} online`;
+  // users: [{ email, name, ... }, ...]
+});</div>
+
+    <!-- ─── Warehouse ─── -->
+    <h2 id="warehouse">Warehouse queries</h2>
+    <p>Execute read-only SQL against your company's data warehouse. SELECT-only (server-enforced), dataset allowlist, and per-user row limits.</p>
+
+    <div class="callout callout-warn">
+      <div class="callout-icon">⚠️</div>
+      <div class="callout-body"><p>Warehouse must be configured by the server admin with a DSN and dataset allowlist. See <a href="warehouse.html">Warehouse setup</a>.</p></div>
+    </div>
+
+    <div class="code-block">// Simple query
+const results = await artifact.warehouse.query(
+  'SELECT department, COUNT(*) as headcount FROM hr.employees GROUP BY 1 ORDER BY 2 DESC'
+);
+// results: { rows: [...], columns: ['department', 'headcount'] }
+
+// With parameters (prevents SQL injection)
+const results = await artifact.warehouse.query(
+  'SELECT * FROM sales.orders WHERE region = $1 LIMIT 100',
+  ['EMEA']
+);
+
+// Named source (if multiple warehouses configured)
+const results = await artifact.warehouse.query(sql, [], { source: 'bigquery' });</div>
+
+    <!-- ─── Notify ─── -->
+    <h2 id="notify">Notify — Slack</h2>
+    <p>Post messages to Slack channels. The webhook URL and bot token live on the server; the client only specifies the channel and message text.</p>
+
+    <div class="callout callout-warn">
+      <div class="callout-icon">⚠️</div>
+      <div class="callout-body"><p>Channel must be in the server's <code class="inline-code">channels_allowlist</code>. Attempts to post to unlisted channels return a 403.</p></div>
+    </div>
+
+    <div class="code-block">await artifact.notify.slack('#approvals', `${artifact.me.name} approved request #${id}`);
+
+// With blocks (Slack Block Kit)
+await artifact.notify.slack('#eng-alerts', {
+  text: 'Deploy started',
+  blocks: [
+    { type: 'section', text: { type: 'mrkdwn', text: `*Deploy:* ${siteName}` } }
+  ]
+});</div>
+
+    <div class="docs-nav-footer">
+      <a class="docs-nav-link" href="getting-started.html">
+        <div class="dir">← Previous</div>
+        <div class="title">Getting started</div>
+      </a>
+      <a class="docs-nav-link next" href="cli-reference.html">
+        <div class="dir">Next</div>
+        <div class="title">CLI reference →</div>
+      </a>
+    </div>
+  </main>
+</div>
+
+</body>
+</html>
