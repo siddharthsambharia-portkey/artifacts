@@ -35,7 +35,7 @@ open http://my-poll.localhost:8443
 | WebSockets | `artifact.ws.room('lobby')` |
 | Identity | `artifact.me` |
 | Slack | `artifact.notify.slack('#channel', 'msg')` |
-| Agent skills | `artifact init` drops CLAUDE.md |
+| Agent skills | `artifact init` drops SKILL.md |
 | MCP server | `artifact mcp` |
 
 ## Architecture

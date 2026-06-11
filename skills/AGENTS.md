@@ -1,4 +1,4 @@
-# Artifact — Agent Instructions
+# Artifact — Developer Guide
 
 This project is an **Artifact site** — a static HTML app hosted on your company's internal platform.
 
@@ -12,7 +12,7 @@ This project is an **Artifact site** — a static HTML app hosted on your compan
 
 ## Full SDK docs
 
-See `CLAUDE.md` in this folder for complete API reference with examples.
+See `SKILL.md` in this folder for complete API reference with examples.
 
 ## Deploy
 

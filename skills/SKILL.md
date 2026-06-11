@@ -1,4 +1,4 @@
-# Artifact — Agent Skill File
+# Artifact SDK Reference
 
 You are building a site on **Artifact**, an internal hosting platform. Every request is from an authenticated employee. No API keys, no auth code, no backend — just HTML + the Artifact SDK.
 
@@ -114,6 +114,6 @@ artifact dev           # local server at <site>.localhost:8443
 artifact list          # all deployed sites
 ```
 
-## MCP Tools (for Claude Code)
+## MCP Tools (for your AI assistant)
 
 `artifact mcp` exposes: `deploy_site`, `list_sites`, `read_logs`, `query_db`.

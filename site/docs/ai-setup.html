@@ -113,7 +113,7 @@ litellm:
   enabled: true
   upstream_url: "http://litellm:8080/v1"   # points to LiteLLM
   api_key: "litellm-master-key"
-  models_allowlist: ["claude-3-5-sonnet-20241022", "claude-opus-4-8"]</div>
+  models_allowlist: ["gpt-4o", "gpt-4o-mini"]</div>
 
     <h2>SSRF protection</h2>
     <p>Artifact validates the <code class="inline-code">upstream_url</code> on startup and blocks requests to private IP ranges, localhost, and link-local addresses. This prevents a compromised site from using the AI proxy to reach internal services.</p>

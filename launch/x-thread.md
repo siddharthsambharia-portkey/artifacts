@@ -10,7 +10,7 @@
 
 **5/8** `artifact.ws.room('lobby')` — multiplayer, presence, live polls. One line.
 
-**6/8** `artifact init` drops a skill file so Claude Code builds and ships sites without reading docs. `artifact mcp` exposes deploy as an MCP tool.
+**6/8** `artifact init` drops a skill file so your AI assistant builds and ships sites without reading docs. `artifact mcp` exposes deploy as an MCP tool.
 
 **7/8** Pluggable: Okta OIDC, IAP/Pomerium header-trust, S3/GCS/MinIO, Postgres, governed mode toggle, admin console.
 

@@ -31,7 +31,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Slack notifications
 - Trust and governed governance modes
 - Admin console and home directory
-- Agent skill files (CLAUDE.md, AGENTS.md)
+- Agent skill files (SKILL.md, AGENTS.md)
 - MCP server for agent integration
 - Docker, Helm, Terraform examples
 - Five example sites: guestbook, live-poll, team-dashboard, multiplayer-cursors, lunch-vote

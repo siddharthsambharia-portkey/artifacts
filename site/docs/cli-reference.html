@@ -115,13 +115,13 @@
     <div class="code-block">[site-name]/
 ├── index.html      ← starter page with artifact.js included
 ├── artifact.json     ← { "site": "site-name" }
-├── CLAUDE.md       ← SDK skill file for Claude Code
+├── SKILL.md — SDK quick reference
 ├── AGENTS.md       ← SDK skill file for other agents
 └── README.md</div>
 
     <div class="callout callout-info">
       <div class="callout-icon">ℹ️</div>
-      <div class="callout-body"><p><code class="inline-code">CLAUDE.md</code> and <code class="inline-code">AGENTS.md</code> tell AI coding assistants the full SDK surface so they can build Artifact apps without reading docs.</p></div>
+      <div class="callout-body"><p><code class="inline-code">SKILL.md</code> and <code class="inline-code">AGENTS.md</code> tell AI coding assistants the full SDK surface so they can build Artifact apps without reading docs.</p></div>
     </div>
 
     <!-- ─── deploy ─── -->
@@ -195,8 +195,8 @@ guestbook        dep_01J...  2026-06-10 15:41     bob@corp.com    2</div>
       </tbody>
     </table>
 
-    <h3>Configure in Claude / Cursor</h3>
-    <p>Add to your MCP config (e.g. <code class="inline-code">~/.cursor/mcp.json</code>):</p>
+    <h3>Configure in your AI assistant</h3>
+    <p>Add to your MCP config (e.g. <code class="inline-code">~/.config/mcp.json</code>):</p>
     <div class="code-block">{
   "mcpServers": {
     "artifact": {

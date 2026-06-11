@@ -13,7 +13,7 @@ We built Artifact: the same idea, rebuilt on pluggable parts so any company can 
 - Browser SDK with zero API keys: `artifact.db`, `artifact.ai`, `artifact.ws`, `artifact.me`
 - Pluggable auth: Okta/Entra OIDC or header-trust for IAP/Pomerium
 - Pluggable storage: S3/GCS/MinIO/local
-- `artifact init` drops agent skills; `artifact mcp` lets Claude Code deploy sites
+- `artifact init` drops agent skills; `artifact mcp` lets your AI assistant deploy sites
 - Apache-2.0
 
 ```bash
