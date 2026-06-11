@@ -1,6 +1,6 @@
 module github.com/siddharthsambharia-portkey/artifacts
 
-go 1.26.4
+go 1.25.8
 
 require (
 	cloud.google.com/go/bigquery v1.74.0
