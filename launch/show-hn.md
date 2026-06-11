@@ -21,6 +21,6 @@ curl -fsSL .../install.sh | sh && artifact dev
 artifact init poll && cd poll && artifact deploy
 ```
 
-GitHub: https://github.com/artifact/artifact
+GitHub: https://github.com/siddharthsambharia-portkey/artifacts
 
 Would love feedback from folks running internal platforms or building with agents.

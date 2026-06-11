@@ -14,4 +14,4 @@
 
 **7/8** Pluggable: Okta OIDC, IAP/Pomerium header-trust, S3/GCS/MinIO, Postgres, governed mode toggle, admin console.
 
-**8/8** `curl -fsSL .../install.sh | sh && artifact dev` — running in 60 seconds. github.com/artifact/artifact
+**8/8** `curl -fsSL .../install.sh | sh && artifact dev` — running in 60 seconds. github.com/siddharthsambharia-portkey/artifacts

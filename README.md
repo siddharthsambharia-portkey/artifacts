@@ -9,7 +9,7 @@ Inspired by [Shopify's Quick](https://shopify.engineering/quick); built so every
 ## 60-second quickstart
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/artifact/artifact/main/scripts/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/siddharthsambharia-portkey/artifacts/main/scripts/install.sh | sh
 artifact dev
 ```
 

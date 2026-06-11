@@ -1,7 +1,7 @@
 #!/bin/sh
 set -e
 
-REPO="${ARTIFACT_REPO:-artifact/artifact}"
+REPO="${ARTIFACT_REPO:-siddharthsambharia-portkey/artifacts}"
 VERSION="${ARTIFACT_VERSION:-latest}"
 INSTALL_DIR="${INSTALL_DIR:-$HOME/.local/bin}"
 

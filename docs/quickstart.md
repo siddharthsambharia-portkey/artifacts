@@ -3,7 +3,7 @@
 ## Install
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/artifact/artifact/main/scripts/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/siddharthsambharia-portkey/artifacts/main/scripts/install.sh | sh
 ```
 
 ## Run locally

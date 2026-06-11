@@ -1,7 +1,7 @@
 class Artifact < Formula
   desc "Internal hosting platform — OSS Quick for every company"
-  homepage "https://github.com/artifact/artifact"
-  url "https://github.com/artifact/artifact/archive/refs/tags/v0.1.0.tar.gz"
+  homepage "https://github.com/siddharthsambharia-portkey/artifacts"
+  url "https://github.com/siddharthsambharia-portkey/artifacts/archive/refs/tags/v0.1.0.tar.gz"
   sha256 "SKIP"
   license "Apache-2.0"
 

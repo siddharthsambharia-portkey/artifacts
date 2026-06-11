@@ -19,7 +19,7 @@
       <a href="getting-started.html">Getting started</a>
       <a href="sdk-reference.html">SDK</a>
       <a href="self-hosting.html" style="color:var(--text)">Self-hosting</a>
-      <a href="https://github.com/artifact/artifact">GitHub</a>
+      <a href="https://github.com/siddharthsambharia-portkey/artifacts">GitHub</a>
       <a class="nav-cta" href="getting-started.html">Get started →</a>
     </div>
   </div>
@@ -108,10 +108,10 @@ notify:
     <h2>Option 1 — Single VM</h2>
     <p>The simplest production deployment: one VM, Postgres, S3.</p>
     <div class="code-block"># On the VM:
-curl -fsSL https://raw.githubusercontent.com/artifact/artifact/main/scripts/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/siddharthsambharia-portkey/artifacts/main/scripts/install.sh | sh
 
 # Write config
-cat > /etc/artifact/artifact.yaml &lt;&lt;'EOF'
+cat > /etc/siddharthsambharia-portkey/artifacts.yaml &lt;&lt;'EOF'
 server:
   base_domain: artifact.corp.com
 auth:
@@ -136,11 +136,11 @@ export ARTIFACT_STORAGE_S3_ACCESS_KEY=...
 export ARTIFACT_STORAGE_S3_SECRET_KEY=...
 export ARTIFACT_AI_API_KEY=sk-...
 
-artifact serve --config /etc/artifact/artifact.yaml</div>
+artifact serve --config /etc/siddharthsambharia-portkey/artifacts.yaml</div>
 
     <h2>Option 2 — Docker Compose</h2>
     <p>The repo ships a <code class="inline-code">deploy/docker-compose.yml</code> that starts Artifact + Postgres + MinIO in one command.</p>
-    <div class="code-block">git clone https://github.com/artifact/artifact
+    <div class="code-block">git clone https://github.com/siddharthsambharia-portkey/artifacts
 cd artifact/deploy
 
 # Edit docker-compose.yml or set env vars:
@@ -154,7 +154,7 @@ docker compose up -d</div>
 
     <h2>Option 3 — Kubernetes (Helm)</h2>
     <div class="code-block">helm repo add artifact https://artifact.github.io/helm-charts
-helm install artifact artifact/artifact \
+helm install artifact siddharthsambharia-portkey/artifacts \
   --namespace artifact --create-namespace \
   -f my-values.yaml</div>
 
@@ -208,14 +208,14 @@ artifact.corp.com     CNAME   internal-lb.corp.com</div>
 
     <h2>Upgrading</h2>
     <div class="code-block"># Single VM:
-curl -fsSL https://raw.githubusercontent.com/artifact/artifact/main/scripts/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/siddharthsambharia-portkey/artifacts/main/scripts/install.sh | sh
 systemctl restart artifact
 
 # Docker:
 docker compose pull && docker compose up -d
 
 # Helm:
-helm upgrade artifact artifact/artifact -f my-values.yaml</div>
+helm upgrade artifact siddharthsambharia-portkey/artifacts -f my-values.yaml</div>
 
     <div class="callout callout-info">
       <div class="callout-icon">ℹ️</div>
