@@ -4,56 +4,141 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Artifact</title>
+  <link rel="stylesheet" href="/ui.css">
   <script src="/artifact.js"></script>
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: system-ui, -apple-system, sans-serif; background: #fafafa; color: #1a1a1a; }
-    header { background: #fff; border-bottom: 1px solid #e5e5e5; padding: 1.5rem 2rem; }
-    h1 { font-size: 1.5rem; font-weight: 600; }
-    .sub { color: #666; font-size: 0.9rem; margin-top: 0.25rem; }
-    main { max-width: 900px; margin: 2rem auto; padding: 0 2rem; }
-    input { width: 100%; padding: 0.75rem 1rem; border: 1px solid #ddd; border-radius: 8px; font-size: 1rem; margin-bottom: 1.5rem; }
-    .grid { display: grid; gap: 1rem; }
-    .card { background: #fff; border: 1px solid #e5e5e5; border-radius: 12px; padding: 1.25rem; text-decoration: none; color: inherit; transition: box-shadow 0.15s; }
-    .card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
-    .card h2 { font-size: 1.1rem; margin-bottom: 0.5rem; }
-    .meta { color: #888; font-size: 0.85rem; }
-    .empty { text-align: center; padding: 3rem; color: #888; }
+    body { background: var(--color-surface); }
+
+    .site-count {
+      font-size: var(--text-sm);
+      color: var(--color-text-tertiary);
+      font-weight: var(--weight-normal);
+    }
+
+    /* Site card favicon placeholder */
+    .card__favicon {
+      width: 28px;
+      height: 28px;
+      border-radius: var(--radius-sm);
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: var(--text-sm);
+      color: var(--color-text-tertiary);
+      margin-bottom: var(--space-3);
+      font-weight: var(--weight-semibold);
+      text-transform: uppercase;
+      flex-shrink: 0;
+    }
+
+    .card__domain {
+      font-size: var(--text-xs);
+      color: var(--color-text-tertiary);
+      margin-top: var(--space-2);
+      font-family: var(--font-mono);
+    }
   </style>
 </head>
 <body>
-  <header>
-    <h1>Artifact</h1>
-    <p class="sub">Internal sites · <span id="user"></span></p>
-  </header>
-  <main>
-    <input type="search" id="search" placeholder="Search sites…" />
-    <div class="grid" id="sites"></div>
-  </main>
+  <nav class="nav">
+    <span class="nav__logo">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+        <rect x="1" y="1" width="6" height="6" rx="1.5" fill="currentColor"/>
+        <rect x="9" y="1" width="6" height="6" rx="1.5" fill="currentColor" opacity=".5"/>
+        <rect x="1" y="9" width="6" height="6" rx="1.5" fill="currentColor" opacity=".5"/>
+        <rect x="9" y="9" width="6" height="6" rx="1.5" fill="currentColor"/>
+      </svg>
+      Artifact
+    </span>
+    <div class="nav__spacer"></div>
+    <span class="nav__user" id="user-name"></span>
+  </nav>
+
+  <div class="container">
+    <div class="page-header">
+      <div>
+        <h1 class="page-header__title">
+          Internal Sites
+          <span class="site-count" id="site-count"></span>
+        </h1>
+        <p class="page-header__sub">Your company's internal web platform</p>
+      </div>
+      <!-- #new-site is hidden here; plan 010 (Drop-to-Deploy) unhides it -->
+      <button class="btn btn--primary" id="new-site" style="display:none" aria-hidden="true">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+          <path d="M7 1v12M1 7h12" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"/>
+        </svg>
+        New Site
+      </button>
+    </div>
+
+    <div class="search-row">
+      <input class="input" type="search" id="search" placeholder="Search sites…" autocomplete="off">
+    </div>
+
+    <div class="grid grid--auto" id="sites"></div>
+  </div>
+
   <script>
     let allSites = [];
+
     artifact.ready().then(async () => {
-      document.getElementById('user').textContent = artifact.me.name;
+      const name = artifact.me.name || artifact.me.email || '';
+      document.getElementById('user-name').textContent = name;
+
       const res = await fetch('/api/v1/sites', { credentials: 'same-origin' });
       allSites = await res.json();
       render(allSites);
     });
-    document.getElementById('search').addEventListener('input', (e) => {
+
+    document.getElementById('search').addEventListener('input', function (e) {
       const q = e.target.value.toLowerCase();
-      render(allSites.filter(s => s.name.includes(q)));
+      render(allSites.filter(function (s) { return s.name.includes(q); }));
     });
+
+    function formatSize(bytes) {
+      if (bytes < 1024) return bytes + ' B';
+      if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(0) + ' KB';
+      return (bytes / 1024 / 1024).toFixed(1) + ' MB';
+    }
+
+    function timeAgo(iso) {
+      var d = new Date(iso);
+      var diff = Math.floor((Date.now() - d) / 1000);
+      if (diff < 60) return 'just now';
+      if (diff < 3600) return Math.floor(diff / 60) + 'm ago';
+      if (diff < 86400) return Math.floor(diff / 3600) + 'h ago';
+      if (diff < 86400 * 7) return Math.floor(diff / 86400) + 'd ago';
+      return d.toLocaleDateString();
+    }
+
     function render(sites) {
-      const el = document.getElementById('sites');
+      var countEl = document.getElementById('site-count');
+      countEl.textContent = sites.length ? '(' + sites.length + ')' : '';
+
+      var el = document.getElementById('sites');
       if (!sites.length) {
-        el.innerHTML = '<div class="empty">No sites yet. Run <code>artifact init && artifact deploy</code>.</div>';
+        el.innerHTML = '<div class="empty-state" style="grid-column: 1/-1">'
+          + '<div class="empty-state__icon">■</div>'
+          + '<div class="empty-state__title">No sites yet</div>'
+          + '<div class="empty-state__body">Deploy your first internal site to see it here.</div>'
+          + '<code class="empty-state__code">artifact init &amp;&amp; artifact deploy</code>'
+          + '</div>';
         return;
       }
-      el.innerHTML = sites.map(s => `
-        <a class="card" href="//${s.name}.${location.hostname}${location.port ? ':'+location.port : ''}">
-          <h2>${s.name}</h2>
-          <div class="meta">${s.deployed_by} · ${new Date(s.deployed_at).toLocaleDateString()} · ${(s.size_bytes/1024).toFixed(0)} KB</div>
-        </a>
-      `).join('');
+
+      el.innerHTML = sites.map(function (s) {
+        var domain = s.name + '.' + location.hostname + (location.port ? ':' + location.port : '');
+        var initial = s.name.charAt(0).toUpperCase();
+        return '<a class="card card--interactive" href="//' + domain + '">'
+          + '<div class="card__favicon">' + initial + '</div>'
+          + '<div class="card__title">' + s.name + '</div>'
+          + '<div class="card__meta">' + (s.deployed_by || '—') + ' · ' + timeAgo(s.deployed_at) + ' · ' + formatSize(s.size_bytes) + '</div>'
+          + '<div class="card__domain">' + domain + '</div>'
+          + '</a>';
+      }).join('');
     }
   </script>
 </body>

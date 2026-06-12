@@ -21,7 +21,10 @@ under "Backlog" below.
 | 004  | Group-scoped visibility (ADR 0003 pre-launch requirement) | P1 | M | 003 | TODO |
 | 005  | Reflect-origin CORS on static responses (ADR 0004 pre-launch gap) | P1 | S | — | TODO |
 | 006  | Harden warehouse SQL guards (UNION/multi-statement/LIMIT bypass) | P2 | M | 001 | TODO |
-| 007  | Quota portability (Postgres), usage indexes, JSON body caps | P2 | M | — (merge after 006) | TODO |
+| 007  | Quota portability (Postgres), usage indexes, JSON body caps | P2 | M | — (merge after 006) | DONE |
+| 008  | HTTP deploy API — `POST /api/v1/deploy` (multipart files or zip) | P1 | M | — | TODO |
+| 009  | Design system — Geist-inspired tokens + redesign of Artifact pages | P1 | M | — | DONE |
+| 010  | Drop-to-Deploy UI on the home page | P1 | M | 008, 009 | TODO |
 
 Status values: TODO | IN PROGRESS | DONE | BLOCKED (with one-line reason) | REJECTED (with one-line rationale)
 
@@ -32,6 +35,9 @@ Status values: TODO | IN PROGRESS | DONE | BLOCKED (with one-line reason) | REJE
 - 006 before 007 (ordering, not dependency): both edit `internal/warehouse/warehouse.go`; sequencing avoids conflicts.
 - 004 and 007 both add a DB migration; whichever lands second takes the next number (004 expects `004_visibility_groups.sql`, 007 expects `005_usage_indexes.sql` — renumber if landed out of order). Plan 007 uses **`005_usage_indexes.sql`** (004 visibility migration was present at execution time).
 - **Before any of this**: commit the untracked `internal/db/migrations/003_ai_usage_calls.sql` — fresh checkouts currently get a different schema than the working tree (one-line fix, no plan needed).
+- 008 before 010: the Drop UI consumes the deploy endpoint's exact multipart contract.
+- 009 before 010: the Drop UI composes `/ui.css` component classes and unhides `#new-site`.
+- 008 and 009 are independent and can run in parallel (008 adds routes, 009 adds `/ui.css` + rewrites HTML).
 
 ## Backlog (audited, real, not yet planned)
 

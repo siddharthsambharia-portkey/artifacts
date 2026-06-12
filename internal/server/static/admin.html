@@ -4,77 +4,225 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Artifact Admin</title>
+  <link rel="stylesheet" href="/ui.css">
   <script src="/artifact.js"></script>
   <style>
-    body { font-family: system-ui; margin: 0; background: #f5f5f5; }
-    nav { background: #1a1a2e; color: #fff; padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center; }
-    nav h1 { font-size: 1.2rem; margin: 0; }
-    main { max-width: 1100px; margin: 2rem auto; padding: 0 2rem; }
-    .panel { background: #fff; border-radius: 8px; padding: 1.5rem; margin-bottom: 1.5rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-    h2 { font-size: 1rem; margin-bottom: 1rem; color: #333; }
-    table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
-    th, td { text-align: left; padding: 0.5rem; border-bottom: 1px solid #eee; }
-    th { color: #666; font-weight: 500; }
-    .badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 0.8rem; background: #e8f5e9; color: #2e7d32; }
-    .stat { font-size: 2rem; font-weight: 600; }
-    .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; }
-    .stat-card { text-align: center; }
-    .stat-label { color: #888; font-size: 0.85rem; }
+    body { background: var(--color-surface); }
+
+    /* Stats row — 3 columns inside a panel */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      divide-x: 1px solid var(--color-border);
+    }
+
+    .stats-grid .stat-card {
+      border-right: 1px solid var(--color-border-subtle);
+    }
+
+    .stats-grid .stat-card:last-child { border-right: none; }
+
+    @media (max-width: 640px) {
+      .stats-grid { grid-template-columns: 1fr; }
+      .stats-grid .stat-card { border-right: none; border-bottom: 1px solid var(--color-border-subtle); }
+      .stats-grid .stat-card:last-child { border-bottom: none; }
+    }
+
+    .panel--no-pad .panel__body { padding: 0; }
   </style>
 </head>
 <body>
-  <nav>
-    <h1>Artifact Admin Console</h1>
-    <span id="admin-user"></span>
+  <nav class="nav">
+    <span class="nav__logo">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+        <rect x="1" y="1" width="6" height="6" rx="1.5" fill="currentColor"/>
+        <rect x="9" y="1" width="6" height="6" rx="1.5" fill="currentColor" opacity=".5"/>
+        <rect x="1" y="9" width="6" height="6" rx="1.5" fill="currentColor" opacity=".5"/>
+        <rect x="9" y="9" width="6" height="6" rx="1.5" fill="currentColor"/>
+      </svg>
+      Artifact
+    </span>
+    <span class="badge badge--neutral" style="margin-left: var(--space-2)">Admin</span>
+    <div class="nav__spacer"></div>
+    <span class="nav__user" id="admin-user"></span>
   </nav>
-  <main>
-    <div class="panel grid" id="stats-panel">
-      <div class="stat-card"><div class="stat" id="stat-sites">—</div><div class="stat-label">Sites</div></div>
-      <div class="stat-card"><div class="stat" id="stat-bytes">—</div><div class="stat-label">Total storage</div></div>
-      <div class="stat-card"><div class="stat" id="stat-mode">—</div><div class="stat-label">Governance</div></div>
+
+  <div class="container--wide">
+    <div class="page-header">
+      <div>
+        <h1 class="page-header__title">Admin Console</h1>
+        <p class="page-header__sub">Platform health, quotas, and audit log</p>
+      </div>
     </div>
+
+    <!-- Stats -->
     <div class="panel">
-      <h2>Quotas <span class="badge" id="mode-badge">trust</span></h2>
-      <pre id="quotas" style="background:#f8f8f8;padding:1rem;border-radius:6px;font-size:0.85rem;overflow:auto"></pre>
-      <p style="color:#888;font-size:0.85rem">To switch to governed mode, set <code>governance.mode: governed</code> in artifact.yaml and restart.</p>
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-card__value" id="stat-sites">—</div>
+          <div class="stat-card__label">Sites</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card__value" id="stat-bytes">—</div>
+          <div class="stat-card__label">Storage</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card__value" id="stat-mode">—</div>
+          <div class="stat-card__label">Governance</div>
+        </div>
+      </div>
     </div>
+
+    <!-- Quotas -->
     <div class="panel">
-      <h2>Sites</h2>
-      <table><thead><tr><th>Name</th><th>Owner</th><th>Deployed By</th><th>Size</th><th>Date</th></tr></thead><tbody id="sites"></tbody></table>
+      <div class="panel__header">
+        <span class="panel__title">Quotas</span>
+        <span class="badge badge--neutral" id="mode-badge">trust</span>
+      </div>
+      <div class="panel__body">
+        <pre class="codeblock" id="quotas"></pre>
+        <p style="margin-top: var(--space-4); font-size: var(--text-sm); color: var(--color-text-secondary);">
+          To switch to governed mode, set <code>governance.mode: governed</code> in
+          <code>artifact.yaml</code> and restart.
+        </p>
+      </div>
     </div>
-    <div class="panel">
-      <h2>AI Usage (30 days)</h2>
-      <table><thead><tr><th>User</th><th>Site</th><th>Tokens</th><th>Requests</th></tr></thead><tbody id="usage"></tbody></table>
+
+    <!-- Sites -->
+    <div class="panel panel--no-pad">
+      <div class="panel__header">
+        <span class="panel__title">Sites</span>
+      </div>
+      <div class="panel__body" style="padding:0">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Owner</th>
+              <th>Deployed By</th>
+              <th>Size</th>
+              <th>Date</th>
+            </tr>
+          </thead>
+          <tbody id="sites"></tbody>
+        </table>
+      </div>
     </div>
-    <div class="panel">
-      <h2>Audit Log</h2>
-      <table><thead><tr><th>Time</th><th>User</th><th>Site</th><th>Action</th><th>Detail</th></tr></thead><tbody id="audit"></tbody></table>
+
+    <!-- AI Usage -->
+    <div class="panel panel--no-pad">
+      <div class="panel__header">
+        <span class="panel__title">AI Usage</span>
+        <span class="badge badge--neutral">30 days</span>
+      </div>
+      <div class="panel__body" style="padding:0">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>User</th>
+              <th>Site</th>
+              <th>Tokens</th>
+              <th>Requests</th>
+            </tr>
+          </thead>
+          <tbody id="usage"></tbody>
+        </table>
+      </div>
     </div>
-  </main>
+
+    <!-- Audit Log -->
+    <div class="panel panel--no-pad" style="margin-bottom: var(--space-10)">
+      <div class="panel__header">
+        <span class="panel__title">Audit Log</span>
+        <span class="badge badge--neutral">last 50</span>
+      </div>
+      <div class="panel__body" style="padding:0">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Time</th>
+              <th>User</th>
+              <th>Site</th>
+              <th>Action</th>
+              <th>Detail</th>
+            </tr>
+          </thead>
+          <tbody id="audit"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
   <script>
+    function formatSize(bytes) {
+      if (bytes < 1024) return bytes + ' B';
+      if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(0) + ' KB';
+      return (bytes / 1024 / 1024).toFixed(1) + ' MB';
+    }
+
+    function fmtDate(iso) {
+      return new Date(iso).toLocaleString(undefined, {
+        month: 'short', day: 'numeric',
+        hour: '2-digit', minute: '2-digit'
+      });
+    }
+
+    function emptyRow(cols, msg) {
+      return '<tr><td colspan="' + cols + '" style="color:var(--color-text-tertiary);text-align:center;padding:var(--space-8)">'
+        + msg + '</td></tr>';
+    }
+
     artifact.ready().then(async () => {
-      document.getElementById('admin-user').textContent = artifact.me.name;
+      document.getElementById('admin-user').textContent = artifact.me.name || artifact.me.email || '';
+
       const [stats, config, sites, usage, audit] = await Promise.all([
-        fetch('/api/v1/admin/stats', { credentials: 'same-origin' }).then(r => r.json()),
-        fetch('/api/v1/admin/config', { credentials: 'same-origin' }).then(r => r.json()),
-        fetch('/api/v1/sites', { credentials: 'same-origin' }).then(r => r.json()),
-        fetch('/api/v1/admin/usage', { credentials: 'same-origin' }).then(r => r.json()),
+        fetch('/api/v1/admin/stats',          { credentials: 'same-origin' }).then(r => r.json()),
+        fetch('/api/v1/admin/config',         { credentials: 'same-origin' }).then(r => r.json()),
+        fetch('/api/v1/sites',                { credentials: 'same-origin' }).then(r => r.json()),
+        fetch('/api/v1/admin/usage',          { credentials: 'same-origin' }).then(r => r.json()),
         fetch('/api/v1/admin/audit?limit=50', { credentials: 'same-origin' }).then(r => r.json()),
       ]);
+
       document.getElementById('stat-sites').textContent = stats.site_count;
-      document.getElementById('stat-bytes').textContent = (stats.total_bytes / 1024 / 1024).toFixed(1) + ' MB';
-      document.getElementById('stat-mode').textContent = stats.governance;
+      document.getElementById('stat-bytes').textContent = formatSize(stats.total_bytes);
+      document.getElementById('stat-mode').textContent  = stats.governance;
       document.getElementById('mode-badge').textContent = config.governance_mode;
-      document.getElementById('quotas').textContent = JSON.stringify(config.quotas, null, 2);
-      document.getElementById('sites').innerHTML = sites.map(s =>
-        `<tr><td>${s.name}</td><td>${s.owner||'—'}</td><td>${s.deployed_by}</td><td>${(s.size_bytes/1024).toFixed(0)} KB</td><td>${new Date(s.deployed_at).toLocaleString()}</td></tr>`
-      ).join('');
-      document.getElementById('usage').innerHTML = usage.map(u =>
-        `<tr><td>${u.user_email}</td><td>${u.site}</td><td>${u.total_tokens}</td><td>${u.requests}</td></tr>`
-      ).join('') || '<tr><td colspan="4">No AI usage yet</td></tr>';
-      document.getElementById('audit').innerHTML = audit.map(e =>
-        `<tr><td>${new Date(e.timestamp).toLocaleString()}</td><td>${e.user_email}</td><td>${e.site}</td><td>${e.action}</td><td>${e.detail||''}</td></tr>`
-      ).join('');
+      document.getElementById('quotas').textContent     = JSON.stringify(config.quotas, null, 2);
+
+      document.getElementById('sites').innerHTML = sites.length
+        ? sites.map(s =>
+            '<tr>'
+            + '<td><strong>' + s.name + '</strong></td>'
+            + '<td>' + (s.owner || '<span style="color:var(--color-text-tertiary)">—</span>') + '</td>'
+            + '<td>' + s.deployed_by + '</td>'
+            + '<td>' + formatSize(s.size_bytes) + '</td>'
+            + '<td>' + fmtDate(s.deployed_at) + '</td>'
+            + '</tr>'
+          ).join('')
+        : emptyRow(5, 'No sites deployed yet');
+
+      document.getElementById('usage').innerHTML = usage && usage.length
+        ? usage.map(u =>
+            '<tr>'
+            + '<td>' + u.user_email + '</td>'
+            + '<td>' + u.site + '</td>'
+            + '<td>' + u.total_tokens.toLocaleString() + '</td>'
+            + '<td>' + u.requests + '</td>'
+            + '</tr>'
+          ).join('')
+        : emptyRow(4, 'No AI usage in the last 30 days');
+
+      document.getElementById('audit').innerHTML = audit && audit.length
+        ? audit.map(e =>
+            '<tr>'
+            + '<td style="white-space:nowrap">' + fmtDate(e.timestamp) + '</td>'
+            + '<td>' + e.user_email + '</td>'
+            + '<td>' + (e.site || '—') + '</td>'
+            + '<td><span class="badge badge--neutral">' + e.action + '</span></td>'
+            + '<td style="color:var(--color-text-secondary)">' + (e.detail || '') + '</td>'
+            + '</tr>'
+          ).join('')
+        : emptyRow(5, 'No audit events yet');
     });
   </script>
 </body>
