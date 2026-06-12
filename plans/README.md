@@ -20,7 +20,7 @@ under "Backlog" below.
 | 003  | Enforce governed-mode visibility on static/WS/KV/listing + WS origin check | P1 | M | 001 | DONE |
 | 004  | Group-scoped visibility (ADR 0003 pre-launch requirement) | P1 | M | 003 | TODO |
 | 005  | Reflect-origin CORS on static responses (ADR 0004 pre-launch gap) | P1 | S | — | DONE |
-| 006  | Harden warehouse SQL guards (UNION/multi-statement/LIMIT bypass) | P2 | M | 001 | TODO |
+| 006  | Harden warehouse SQL guards (UNION/multi-statement/LIMIT bypass) | P2 | M | 001 | DONE |
 | 007  | Quota portability (Postgres), usage indexes, JSON body caps | P2 | M | — (merge after 006) | TODO |
 
 Status values: TODO | IN PROGRESS | DONE | BLOCKED (with one-line reason) | REJECTED (with one-line rationale)

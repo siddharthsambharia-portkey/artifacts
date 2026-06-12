@@ -57,8 +57,12 @@
     <p class="lead">Connect BigQuery, Snowflake, or a Postgres read replica and let employees query data from any Artifact site. SELECT-only, dataset allowlist enforced server-side.</p>
 
     <h2>Security model</h2>
+    <div class="callout callout-warning">
+      <strong>Use read-only credentials.</strong> The warehouse login you give Artifact <strong>must be read-only</strong> at the warehouse itself (a read-only BigQuery role, a Snowflake read-only role, or a Postgres read replica / <code class="inline-code">readonly</code> user). This is the real guarantee that employee queries can never modify your data — the database physically refuses any write, no matter how a query is phrased. Artifact's query checks below are an early, friendly guardrail, <em>not</em> the security boundary.
+    </div>
     <ul>
-      <li><strong>SELECT only</strong> — Artifact parses every query and rejects anything other than a <code class="inline-code">SELECT</code> statement (no <code class="inline-code">INSERT</code>, <code class="inline-code">UPDATE</code>, <code class="inline-code">DROP</code>, CTEs with writes, etc.)</li>
+      <li><strong>Read-only credentials (the guarantee)</strong> — Artifact connects with the read-only login you provide; the warehouse rejects all writes server-side</li>
+      <li><strong>SELECT-only early check</strong> — Artifact rejects queries that don't start with <code class="inline-code">SELECT</code> or that contain write keywords (<code class="inline-code">INSERT</code>, <code class="inline-code">UPDATE</code>, <code class="inline-code">DELETE</code>, <code class="inline-code">DROP</code>, …) so Builders get a clear error before the query leaves the building. This is a text check, not a full SQL parser — defense in depth, not the wall.</li>
       <li><strong>Dataset allowlist</strong> — Only tables in listed datasets/schemas can be queried</li>
       <li><strong>Row limit</strong> — Results capped at <code class="inline-code">max_rows</code> (default 10,000)</li>
       <li><strong>Per-user daily query quota</strong> — Rejects when exceeded</li>
