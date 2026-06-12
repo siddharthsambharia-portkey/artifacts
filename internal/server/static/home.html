@@ -9,39 +9,224 @@
   <style>
     body { background: var(--color-surface); }
 
-    .site-count {
-      font-size: var(--text-sm);
-      color: var(--color-text-tertiary);
-      font-weight: var(--weight-normal);
-    }
-
-    /* Site card favicon placeholder */
+    /* ── Site card ── */
     .card__favicon {
-      width: 28px;
-      height: 28px;
+      width: 28px; height: 28px;
       border-radius: var(--radius-sm);
       background: var(--color-surface);
       border: 1px solid var(--color-border);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: var(--text-sm);
-      color: var(--color-text-tertiary);
+      display: flex; align-items: center; justify-content: center;
+      font-size: var(--text-sm); color: var(--color-text-tertiary);
       margin-bottom: var(--space-3);
       font-weight: var(--weight-semibold);
-      text-transform: uppercase;
-      flex-shrink: 0;
+      text-transform: uppercase; flex-shrink: 0;
+    }
+    .card__domain {
+      font-size: var(--text-xs); color: var(--color-text-tertiary);
+      margin-top: var(--space-2); font-family: var(--font-mono);
+    }
+    .site-count { font-size: var(--text-sm); color: var(--color-text-tertiary); font-weight: var(--weight-normal); }
+
+    /* ── Full-page drop overlay ── */
+    #drop-overlay {
+      display: none;
+      position: fixed; inset: 0; z-index: 100;
+      background: rgba(0,0,0,0.45);
+      backdrop-filter: blur(2px);
+      align-items: center; justify-content: center;
+      flex-direction: column; gap: var(--space-3);
+    }
+    #drop-overlay.active { display: flex; }
+    .drop-overlay__box {
+      background: var(--color-bg);
+      border: 2px dashed var(--color-text-tertiary);
+      border-radius: var(--radius-xl);
+      padding: var(--space-12) var(--space-16);
+      text-align: center;
+      pointer-events: none;
+    }
+    .drop-overlay__icon { font-size: 2.5rem; margin-bottom: var(--space-3); }
+    .drop-overlay__title { font-size: var(--text-xl); font-weight: var(--weight-semibold); }
+    .drop-overlay__sub { font-size: var(--text-sm); color: var(--color-text-secondary); margin-top: var(--space-1); }
+
+    /* ── Modal (dialog) ── */
+    dialog {
+      border: none; padding: 0; border-radius: var(--radius-xl);
+      box-shadow: var(--shadow-lg);
+      max-width: 440px; width: calc(100vw - 2rem);
+      background: var(--color-bg);
+    }
+    dialog::backdrop { background: rgba(0,0,0,0.4); backdrop-filter: blur(2px); }
+
+    .modal__header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: var(--space-5) var(--space-5) 0;
+    }
+    .modal__title { font-size: var(--text-lg); font-weight: var(--weight-semibold); letter-spacing: -0.02em; }
+    .modal__close {
+      background: none; border: none; cursor: pointer;
+      color: var(--color-text-tertiary); font-size: 1.25rem; line-height: 1;
+      padding: var(--space-1); border-radius: var(--radius-sm);
+      transition: color var(--transition-fast);
+    }
+    .modal__close:hover { color: var(--color-text); }
+    .modal__body { padding: var(--space-5); }
+    .modal__footer {
+      padding: 0 var(--space-5) var(--space-5);
+      display: flex; gap: var(--space-3); justify-content: flex-end;
     }
 
-    .card__domain {
-      font-size: var(--text-xs);
-      color: var(--color-text-tertiary);
-      margin-top: var(--space-2);
-      font-family: var(--font-mono);
+    /* ── Drop zone inside modal ── */
+    #modal-dropzone {
+      border: 2px dashed var(--color-border);
+      border-radius: var(--radius-lg);
+      padding: var(--space-8) var(--space-6);
+      text-align: center;
+      cursor: pointer;
+      transition: border-color var(--transition-fast), background var(--transition-fast);
+      margin-bottom: var(--space-4);
     }
+    #modal-dropzone:hover, #modal-dropzone.dragover {
+      border-color: var(--color-text-tertiary);
+      background: var(--color-surface);
+    }
+    #modal-dropzone input[type=file] { display: none; }
+    .dropzone__icon { font-size: 1.75rem; margin-bottom: var(--space-2); }
+    .dropzone__label { font-size: var(--text-sm); color: var(--color-text-secondary); }
+    .dropzone__label strong { color: var(--color-text); }
+    .dropzone__hint { font-size: var(--text-xs); color: var(--color-text-tertiary); margin-top: var(--space-1); }
+
+    /* ── File summary ── */
+    #file-summary {
+      display: none;
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      padding: var(--space-3) var(--space-4);
+      margin-bottom: var(--space-4);
+      font-size: var(--text-sm);
+      display: flex; align-items: center; gap: var(--space-3);
+    }
+    #file-summary.hidden { display: none; }
+    .file-summary__icon { font-size: 1.25rem; flex-shrink: 0; }
+    .file-summary__info { flex: 1; }
+    .file-summary__name { font-weight: var(--weight-medium); }
+    .file-summary__meta { color: var(--color-text-secondary); font-size: var(--text-xs); }
+    .file-summary__clear { background: none; border: none; cursor: pointer; color: var(--color-text-tertiary); font-size: 1rem; padding: var(--space-1); }
+    .file-summary__clear:hover { color: var(--color-text); }
+
+    /* ── Form field ── */
+    .field { margin-bottom: var(--space-4); }
+    .field label { display: block; font-size: var(--text-sm); font-weight: var(--weight-medium); margin-bottom: var(--space-2); }
+    .field .hint { font-size: var(--text-xs); color: var(--color-text-tertiary); margin-top: var(--space-1); }
+
+    /* ── Progress bar ── */
+    #progress-wrap { display: none; margin-bottom: var(--space-4); }
+    #progress-wrap.visible { display: block; }
+    .progress-label { font-size: var(--text-xs); color: var(--color-text-secondary); margin-bottom: var(--space-2); display: flex; justify-content: space-between; }
+    .progress-track {
+      height: 4px; background: var(--color-border); border-radius: 2px; overflow: hidden;
+    }
+    .progress-fill {
+      height: 100%; background: var(--color-accent); border-radius: 2px;
+      width: 0%; transition: width 0.1s linear;
+    }
+
+    /* ── Error / warning banner ── */
+    .banner {
+      border-radius: var(--radius-md);
+      padding: var(--space-3) var(--space-4);
+      font-size: var(--text-sm);
+      margin-bottom: var(--space-4);
+    }
+    .banner--error { background: var(--color-error-bg); color: var(--color-error-text); }
+    .banner--warning { background: var(--color-warning-bg); color: var(--color-warning-text); }
+    .banner--success { background: var(--color-success-bg); color: var(--color-success-text); }
+    .banner.hidden { display: none; }
+
+    /* ── Conflict confirm ── */
+    #conflict-section { display: none; }
+    #conflict-section.visible { display: block; }
   </style>
 </head>
 <body>
+
+  <!-- Full-page drag-over overlay -->
+  <div id="drop-overlay" role="status" aria-live="polite">
+    <div class="drop-overlay__box">
+      <div class="drop-overlay__icon">⬆</div>
+      <div class="drop-overlay__title">Drop to deploy</div>
+      <div class="drop-overlay__sub">Release your folder or zip file to start</div>
+    </div>
+  </div>
+
+  <!-- New Site modal -->
+  <dialog id="deploy-modal" aria-labelledby="modal-title">
+    <div class="modal__header">
+      <span class="modal__title" id="modal-title">New Site</span>
+      <button class="modal__close" id="modal-close" aria-label="Close">✕</button>
+    </div>
+    <div class="modal__body">
+
+      <!-- Drop zone -->
+      <div id="modal-dropzone" role="button" tabindex="0" aria-label="Drop files or click to browse">
+        <input type="file" id="file-input" multiple accept=".html,.css,.js,.json,.png,.jpg,.jpeg,.gif,.svg,.ico,.woff,.woff2,.ttf,.eot,.webp,.avif,.mp4,.webm,.pdf,.txt,.xml,.csv">
+        <input type="file" id="zip-input" accept=".zip">
+        <div class="dropzone__icon">📁</div>
+        <div class="dropzone__label"><strong>Drop your site folder</strong> or click to browse</div>
+        <div class="dropzone__hint">Folder of static files, or a .zip archive</div>
+      </div>
+
+      <!-- File summary -->
+      <div id="file-summary" class="hidden">
+        <span class="file-summary__icon">📄</span>
+        <div class="file-summary__info">
+          <div class="file-summary__name" id="fs-name"></div>
+          <div class="file-summary__meta" id="fs-meta"></div>
+        </div>
+        <button class="file-summary__clear" id="fs-clear" aria-label="Clear files">✕</button>
+      </div>
+
+      <!-- Conflict warning -->
+      <div id="conflict-section">
+        <div class="banner banner--warning" id="conflict-banner"></div>
+        <label style="display:flex;align-items:center;gap:var(--space-2);font-size:var(--text-sm);margin-bottom:var(--space-4);cursor:pointer;">
+          <input type="checkbox" id="overwrite-check">
+          Yes, overwrite this site
+        </label>
+      </div>
+
+      <!-- Error/success -->
+      <div class="banner banner--error hidden" id="error-banner"></div>
+      <div class="banner banner--success hidden" id="success-banner"></div>
+
+      <!-- Progress -->
+      <div id="progress-wrap">
+        <div class="progress-label">
+          <span id="progress-label">Uploading…</span>
+          <span id="progress-pct">0%</span>
+        </div>
+        <div class="progress-track"><div class="progress-fill" id="progress-fill"></div></div>
+      </div>
+
+      <!-- Site name -->
+      <div class="field">
+        <label for="site-name-input">Site name</label>
+        <input class="input" type="text" id="site-name-input"
+               placeholder="my-site"
+               pattern="[a-z0-9][a-z0-9\-]*[a-z0-9]|[a-z0-9]"
+               autocomplete="off" spellcheck="false">
+        <div class="hint" id="site-name-hint"></div>
+      </div>
+
+    </div>
+    <div class="modal__footer">
+      <button class="btn btn--secondary" id="modal-cancel">Cancel</button>
+      <button class="btn btn--primary" id="deploy-btn" disabled>Deploy</button>
+    </div>
+  </dialog>
+
+  <!-- Nav -->
   <nav class="nav">
     <span class="nav__logo">
       <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
@@ -65,8 +250,7 @@
         </h1>
         <p class="page-header__sub">Your company's internal web platform</p>
       </div>
-      <!-- #new-site is hidden here; plan 010 (Drop-to-Deploy) unhides it -->
-      <button class="btn btn--primary" id="new-site" style="display:none" aria-hidden="true">
+      <button class="btn btn--primary" id="new-site">
         <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
           <path d="M7 1v12M1 7h12" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"/>
         </svg>
@@ -82,21 +266,25 @@
   </div>
 
   <script>
-    let allSites = [];
+    /* ── Site list ─────────────────────────────────────────────── */
+    var allSites = [];
 
-    artifact.ready().then(async () => {
-      const name = artifact.me.name || artifact.me.email || '';
+    artifact.ready().then(function () {
+      var name = artifact.me.name || artifact.me.email || '';
       document.getElementById('user-name').textContent = name;
-
-      const res = await fetch('/api/v1/sites', { credentials: 'same-origin' });
-      allSites = await res.json();
-      render(allSites);
+      loadSites();
     });
 
     document.getElementById('search').addEventListener('input', function (e) {
-      const q = e.target.value.toLowerCase();
-      render(allSites.filter(function (s) { return s.name.includes(q); }));
+      var q = e.target.value.toLowerCase();
+      renderSites(allSites.filter(function (s) { return s.name.includes(q); }));
     });
+
+    function loadSites() {
+      fetch('/api/v1/sites', { credentials: 'same-origin' })
+        .then(function (r) { return r.json(); })
+        .then(function (sites) { allSites = sites; renderSites(sites); });
+    }
 
     function formatSize(bytes) {
       if (bytes < 1024) return bytes + ' B';
@@ -105,40 +293,360 @@
     }
 
     function timeAgo(iso) {
-      var d = new Date(iso);
-      var diff = Math.floor((Date.now() - d) / 1000);
+      var diff = Math.floor((Date.now() - new Date(iso)) / 1000);
       if (diff < 60) return 'just now';
       if (diff < 3600) return Math.floor(diff / 60) + 'm ago';
       if (diff < 86400) return Math.floor(diff / 3600) + 'h ago';
       if (diff < 86400 * 7) return Math.floor(diff / 86400) + 'd ago';
-      return d.toLocaleDateString();
+      return new Date(iso).toLocaleDateString();
     }
 
-    function render(sites) {
+    function renderSites(sites) {
       var countEl = document.getElementById('site-count');
       countEl.textContent = sites.length ? '(' + sites.length + ')' : '';
-
       var el = document.getElementById('sites');
       if (!sites.length) {
-        el.innerHTML = '<div class="empty-state" style="grid-column: 1/-1">'
+        el.innerHTML = '<div class="empty-state" style="grid-column:1/-1">'
           + '<div class="empty-state__icon">■</div>'
           + '<div class="empty-state__title">No sites yet</div>'
-          + '<div class="empty-state__body">Deploy your first internal site to see it here.</div>'
+          + '<div class="empty-state__body">Click <strong>New Site</strong> above, or drop a folder anywhere on the page.</div>'
           + '<code class="empty-state__code">artifact init &amp;&amp; artifact deploy</code>'
           + '</div>';
         return;
       }
-
       el.innerHTML = sites.map(function (s) {
         var domain = s.name + '.' + location.hostname + (location.port ? ':' + location.port : '');
-        var initial = s.name.charAt(0).toUpperCase();
         return '<a class="card card--interactive" href="//' + domain + '">'
-          + '<div class="card__favicon">' + initial + '</div>'
+          + '<div class="card__favicon">' + s.name.charAt(0).toUpperCase() + '</div>'
           + '<div class="card__title">' + s.name + '</div>'
           + '<div class="card__meta">' + (s.deployed_by || '—') + ' · ' + timeAgo(s.deployed_at) + ' · ' + formatSize(s.size_bytes) + '</div>'
           + '<div class="card__domain">' + domain + '</div>'
           + '</a>';
       }).join('');
+    }
+
+    /* ── Drop-to-Deploy ────────────────────────────────────────── */
+
+    // State
+    var pendingFiles = null;   // FileList from directory picker
+    var pendingZip   = null;   // File (zip)
+    var pendingName  = '';     // suggested site name
+
+    // Elements
+    var overlay        = document.getElementById('drop-overlay');
+    var modal          = document.getElementById('deploy-modal');
+    var newSiteBtn     = document.getElementById('new-site');
+    var modalClose     = document.getElementById('modal-close');
+    var modalCancel    = document.getElementById('modal-cancel');
+    var deployBtn      = document.getElementById('deploy-btn');
+    var dropzone       = document.getElementById('modal-dropzone');
+    var fileInput      = document.getElementById('file-input');
+    var zipInput       = document.getElementById('zip-input');
+    var fileSummary    = document.getElementById('file-summary');
+    var fsName         = document.getElementById('fs-name');
+    var fsMeta         = document.getElementById('fs-meta');
+    var fsClear        = document.getElementById('fs-clear');
+    var siteNameInput  = document.getElementById('site-name-input');
+    var siteNameHint   = document.getElementById('site-name-hint');
+    var conflictSec    = document.getElementById('conflict-section');
+    var conflictBanner = document.getElementById('conflict-banner');
+    var overwriteCheck = document.getElementById('overwrite-check');
+    var errorBanner    = document.getElementById('error-banner');
+    var successBanner  = document.getElementById('success-banner');
+    var progressWrap   = document.getElementById('progress-wrap');
+    var progressFill   = document.getElementById('progress-fill');
+    var progressPct    = document.getElementById('progress-pct');
+    var progressLabel  = document.getElementById('progress-label');
+
+    // ── Page-level drag handling (shows full-page overlay) ──────
+    var dragDepth = 0;
+    document.addEventListener('dragenter', function (e) {
+      e.preventDefault();
+      dragDepth++;
+      if (dragDepth === 1) overlay.classList.add('active');
+    });
+    document.addEventListener('dragleave', function (e) {
+      dragDepth--;
+      if (dragDepth === 0) overlay.classList.remove('active');
+    });
+    document.addEventListener('dragover', function (e) { e.preventDefault(); });
+    document.addEventListener('drop', function (e) {
+      e.preventDefault();
+      dragDepth = 0;
+      overlay.classList.remove('active');
+      handleDroppedItems(e.dataTransfer);
+    });
+
+    function handleDroppedItems(dt) {
+      // Prefer zip if dropped
+      var files = dt.files;
+      if (files.length === 1 && files[0].name.endsWith('.zip')) {
+        setZip(files[0]);
+      } else if (files.length > 0) {
+        // Multi-file drop (browser flattens directories to file list)
+        setFiles(files, guessFolderName(dt));
+      }
+      openModal();
+    }
+
+    function guessFolderName(dt) {
+      // Chrome exposes items[0].webkitGetAsEntry() to get the folder name
+      if (dt.items && dt.items[0]) {
+        var entry = dt.items[0].webkitGetAsEntry && dt.items[0].webkitGetAsEntry();
+        if (entry && entry.isDirectory) return entry.name;
+      }
+      return '';
+    }
+
+    // ── Modal open / close ──────────────────────────────────────
+    newSiteBtn.addEventListener('click', openModal);
+    modalClose.addEventListener('click', closeModal);
+    modalCancel.addEventListener('click', closeModal);
+    modal.addEventListener('cancel', closeModal);  // Esc key
+
+    function openModal() {
+      resetModal();
+      modal.showModal();
+      siteNameInput.focus();
+    }
+
+    function closeModal() {
+      modal.close();
+      resetModal();
+    }
+
+    function resetModal() {
+      pendingFiles = null; pendingZip = null; pendingName = '';
+      fileSummary.classList.add('hidden');
+      dropzone.style.display = '';
+      siteNameInput.value = '';
+      siteNameHint.textContent = '';
+      hide(conflictSec); hide(errorBanner); hide(successBanner);
+      hide(progressWrap);
+      overwriteCheck.checked = false;
+      deployBtn.disabled = true;
+      deployBtn.textContent = 'Deploy';
+    }
+
+    // ── Modal drop zone ─────────────────────────────────────────
+    dropzone.addEventListener('dragover', function (e) {
+      e.preventDefault(); dropzone.classList.add('dragover');
+    });
+    dropzone.addEventListener('dragleave', function () {
+      dropzone.classList.remove('dragover');
+    });
+    dropzone.addEventListener('drop', function (e) {
+      e.preventDefault(); e.stopPropagation();
+      dropzone.classList.remove('dragover');
+      handleDroppedItems(e.dataTransfer);
+    });
+    dropzone.addEventListener('click', function () {
+      // Show a tiny choice: folder vs zip
+      // Use webkitdirectory for folder, zip-input for zip
+      var choice = confirm('Click OK to pick a folder, or Cancel to pick a .zip file.');
+      if (choice) {
+        fileInput.setAttribute('webkitdirectory', '');
+        fileInput.setAttribute('directory', '');
+        fileInput.removeAttribute('multiple');
+        fileInput.click();
+      } else {
+        zipInput.click();
+      }
+    });
+    dropzone.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter' || e.key === ' ') dropzone.click();
+    });
+
+    fileInput.addEventListener('change', function () {
+      if (fileInput.files.length) setFiles(fileInput.files, guessNameFromWebkitPath(fileInput.files));
+    });
+    zipInput.addEventListener('change', function () {
+      if (zipInput.files.length) setZip(zipInput.files[0]);
+    });
+
+    function guessNameFromWebkitPath(files) {
+      // webkitRelativePath = "foldername/index.html"
+      if (files[0] && files[0].webkitRelativePath) {
+        return files[0].webkitRelativePath.split('/')[0];
+      }
+      return '';
+    }
+
+    function setFiles(files, folderName) {
+      pendingFiles = files; pendingZip = null;
+      pendingName = slugify(folderName || '');
+      showFileSummary(
+        folderName || (files.length + ' files'),
+        files.length + ' file' + (files.length !== 1 ? 's' : '') + ' · ' + formatSize(totalSize(files))
+      );
+      if (pendingName && !siteNameInput.value) siteNameInput.value = pendingName;
+      validateForm();
+    }
+
+    function setZip(file) {
+      pendingZip = file; pendingFiles = null;
+      pendingName = slugify(file.name.replace(/\.zip$/i, ''));
+      showFileSummary(file.name, formatSize(file.size) + ' zip archive');
+      if (pendingName && !siteNameInput.value) siteNameInput.value = pendingName;
+      validateForm();
+    }
+
+    function showFileSummary(name, meta) {
+      dropzone.style.display = 'none';
+      fileSummary.classList.remove('hidden');
+      fsName.textContent = name;
+      fsMeta.textContent = meta;
+    }
+
+    fsClear.addEventListener('click', function () {
+      pendingFiles = null; pendingZip = null;
+      fileSummary.classList.add('hidden');
+      dropzone.style.display = '';
+      fileInput.value = ''; zipInput.value = '';
+      validateForm();
+    });
+
+    function totalSize(files) {
+      var n = 0;
+      for (var i = 0; i < files.length; i++) n += files[i].size;
+      return n;
+    }
+
+    // ── Site name validation ────────────────────────────────────
+    siteNameInput.addEventListener('input', function () {
+      hide(conflictSec); overwriteCheck.checked = false;
+      validateForm();
+    });
+
+    function validateForm() {
+      var name = siteNameInput.value.trim();
+      var hasFiles = pendingFiles || pendingZip;
+      var nameOk = /^[a-z0-9][a-z0-9\-]*[a-z0-9]$|^[a-z0-9]$/.test(name);
+      if (name && !nameOk) {
+        siteNameHint.textContent = 'Lowercase letters, numbers, and hyphens only; must start and end with a letter or number.';
+      } else {
+        siteNameHint.textContent = hasFiles && nameOk
+          ? name + '.' + location.hostname + (location.port ? ':' + location.port : '')
+          : '';
+      }
+      deployBtn.disabled = !(hasFiles && nameOk);
+    }
+
+    // ── Deploy ──────────────────────────────────────────────────
+    deployBtn.addEventListener('click', function () {
+      var confirmOverwrite = conflictSec.classList.contains('visible') && overwriteCheck.checked;
+      startDeploy(confirmOverwrite);
+    });
+
+    overwriteCheck.addEventListener('change', function () {
+      deployBtn.disabled = !overwriteCheck.checked;
+    });
+
+    function startDeploy(confirmOverwrite) {
+      hide(errorBanner); hide(successBanner); hide(conflictSec);
+      deployBtn.disabled = true;
+      deployBtn.textContent = 'Deploying…';
+      show(progressWrap);
+      setProgress(0, 'Uploading…');
+
+      var form = new FormData();
+      form.append('site', siteNameInput.value.trim());
+      if (confirmOverwrite) form.append('confirm_overwrite', 'true');
+
+      if (pendingZip) {
+        form.append('zip', pendingZip, pendingZip.name);
+      } else {
+        for (var i = 0; i < pendingFiles.length; i++) {
+          var f = pendingFiles[i];
+          // Use webkitRelativePath as the filename so the server sees folder structure
+          var name = f.webkitRelativePath || f.name;
+          form.append('files', f, name);
+        }
+      }
+
+      var xhr = new XMLHttpRequest();
+      xhr.open('POST', '/api/v1/deploy');
+      xhr.withCredentials = true;
+
+      xhr.upload.addEventListener('progress', function (e) {
+        if (e.lengthComputable) {
+          var pct = Math.round(e.loaded / e.total * 90); // leave 10% for server processing
+          setProgress(pct, 'Uploading…');
+        }
+      });
+
+      xhr.addEventListener('load', function () {
+        setProgress(100, 'Done');
+        hide(progressWrap);
+
+        var body;
+        try { body = JSON.parse(xhr.responseText); } catch (e) { body = {}; }
+
+        if (xhr.status === 200) {
+          onDeploySuccess(body);
+        } else if (xhr.status === 409) {
+          onDeployConflict(body);
+        } else {
+          onDeployError(body.error || ('Unexpected error (' + xhr.status + ')'));
+        }
+      });
+
+      xhr.addEventListener('error', function () {
+        hide(progressWrap);
+        onDeployError('Network error — could not reach the server.');
+      });
+
+      xhr.send(form);
+    }
+
+    function onDeploySuccess(data) {
+      var url = data.url || ('//' + data.site + '.' + location.hostname + (location.port ? ':' + location.port : ''));
+      var warnHtml = '';
+      if (data.warnings && data.warnings.length) {
+        warnHtml = '<br><br>⚠ ' + data.warnings.join('<br>⚠ ');
+      }
+      show(successBanner);
+      successBanner.innerHTML = '✓ <strong>' + data.site + '</strong> deployed ('
+        + data.file_count + ' file' + (data.file_count !== 1 ? 's' : '') + ', '
+        + formatSize(data.total_bytes) + '). '
+        + '<a href="' + url + '" target="_blank" rel="noopener" style="text-decoration:underline;color:inherit">Open site →</a>'
+        + warnHtml;
+      deployBtn.textContent = 'Deploy';
+      deployBtn.disabled = false;
+      loadSites(); // refresh the site list in background
+    }
+
+    function onDeployConflict(data) {
+      show(conflictSec);
+      conflictBanner.textContent = data.error
+        + (data.last_deployed_by ? ' Last deployed by: ' + data.last_deployed_by + '.' : '');
+      overwriteCheck.checked = false;
+      deployBtn.disabled = true;
+      deployBtn.textContent = 'Deploy';
+    }
+
+    function onDeployError(msg) {
+      show(errorBanner);
+      errorBanner.textContent = msg;
+      deployBtn.textContent = 'Deploy';
+      deployBtn.disabled = false;
+    }
+
+    function setProgress(pct, label) {
+      progressFill.style.width = pct + '%';
+      progressPct.textContent = pct + '%';
+      progressLabel.textContent = label;
+    }
+
+    // ── Helpers ─────────────────────────────────────────────────
+    function show(el) { el.classList.remove('hidden'); el.style.display = ''; }
+    function hide(el) { el.classList.add('hidden'); }
+
+    function slugify(str) {
+      return str.toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '')
+        .slice(0, 63);
     }
   </script>
 </body>
