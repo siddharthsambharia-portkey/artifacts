@@ -110,7 +110,7 @@ func (h *Handler) Chat(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", resp.Header.Get("Content-Type"))
 		io.Copy(w, resp.Body)
 	}
-	_ = h.db.InsertAIUsage(r.Context(), &db.AIUsage{UserEmail: u.Email, Site: site, Tokens: 100, Timestamp: time.Now()})
+	_ = h.db.InsertAIUsage(r.Context(), &db.AIUsage{UserEmail: u.Email, Site: site, Timestamp: time.Now()})
 }
 
 func (h *Handler) Image(w http.ResponseWriter, r *http.Request) {

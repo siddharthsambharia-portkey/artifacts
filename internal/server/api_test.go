@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/siddharthsambharia-portkey/artifacts/internal/auth"
 	"github.com/siddharthsambharia-portkey/artifacts/internal/config"
@@ -109,6 +110,62 @@ func TestKVGovernedMode(t *testing.T) {
 	t.Run("kv get non-owner denied", func(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/api/v1/kv/theme", nil)
 		req.Host = "private-site.localhost:8443"
+		req = req.WithContext(auth.WithUser(req.Context(), bob))
+		w := httptest.NewRecorder()
+		api.handleKVGet(w, req)
+		if w.Code != http.StatusForbidden {
+			t.Fatalf("status %d body %s", w.Code, w.Body.String())
+		}
+	})
+}
+
+func TestKVGroupScopedVisibility(t *testing.T) {
+	tmp := t.TempDir()
+	cfg := config.DefaultDev()
+	cfg.Governance.Mode = "governed"
+	cfg.DataDir = filepath.Join(tmp, "data")
+	cfg.Database.URL = filepath.Join(tmp, "data", "test.db")
+	database, err := db.Open(cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	database.Migrate(context.Background())
+	if err := database.UpsertSite(context.Background(), &db.SiteRecord{
+		Name: "hr-site", Owner: "alice@co", Visibility: "group",
+		VisibilityGroups: []string{"hr-team"},
+		DeployID: "d1", DeployedBy: "alice@co", DeployedAt: time.Now(),
+	}); err != nil {
+		t.Fatal(err)
+	}
+	api := NewAPI(cfg, database, governance.New(cfg), nil)
+
+	alice := &auth.User{Email: "alice@co", Groups: []string{"employees"}}
+	carol := &auth.User{Email: "carol@co", Groups: []string{"hr-team"}}
+	bob := &auth.User{Email: "bob@co", Groups: []string{"employees"}}
+
+	req := httptest.NewRequest(http.MethodPut, "/api/v1/kv/secret", bytes.NewReader([]byte(`{"value":"x"}`)))
+	req.Host = "hr-site.localhost:8443"
+	req = req.WithContext(auth.WithUser(req.Context(), alice))
+	w := httptest.NewRecorder()
+	api.handleKVSet(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("seed kv: status %d body %s", w.Code, w.Body.String())
+	}
+
+	t.Run("in-group non-owner allowed", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/api/v1/kv/secret", nil)
+		req.Host = "hr-site.localhost:8443"
+		req = req.WithContext(auth.WithUser(req.Context(), carol))
+		w := httptest.NewRecorder()
+		api.handleKVGet(w, req)
+		if w.Code != http.StatusOK {
+			t.Fatalf("status %d body %s", w.Code, w.Body.String())
+		}
+	})
+
+	t.Run("out-of-group denied", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/api/v1/kv/secret", nil)
+		req.Host = "hr-site.localhost:8443"
 		req = req.WithContext(auth.WithUser(req.Context(), bob))
 		w := httptest.NewRecorder()
 		api.handleKVGet(w, req)

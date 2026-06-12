@@ -4,7 +4,9 @@ import (
 	"encoding/json"
 	"net/http"
 	"strconv"
+	"time"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/siddharthsambharia-portkey/artifacts/internal/auth"
 	"github.com/siddharthsambharia-portkey/artifacts/internal/config"
 	"github.com/siddharthsambharia-portkey/artifacts/internal/db"
@@ -48,20 +50,19 @@ func (h *Handler) Usage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	rows, err := h.db.QueryContext(r.Context(),
-		`SELECT user_email, site, SUM(tokens) as total_tokens, COUNT(*) as requests
-		 FROM ai_usage GROUP BY user_email, site ORDER BY total_tokens DESC LIMIT 100`)
+		`SELECT user_email, site, COUNT(*) as requests
+		 FROM ai_usage GROUP BY user_email, site ORDER BY requests DESC LIMIT 100`)
 	type usageRow struct {
-		UserEmail   string `json:"user_email"`
-		Site        string `json:"site"`
-		TotalTokens int    `json:"total_tokens"`
-		Requests    int    `json:"requests"`
+		UserEmail string `json:"user_email"`
+		Site      string `json:"site"`
+		Requests  int    `json:"requests"`
 	}
 	var out []usageRow
 	if err == nil {
 		defer rows.Close()
 		for rows.Next() {
 			var u usageRow
-			rows.Scan(&u.UserEmail, &u.Site, &u.TotalTokens, &u.Requests)
+			rows.Scan(&u.UserEmail, &u.Site, &u.Requests)
 			out = append(out, u)
 		}
 	}
@@ -82,6 +83,48 @@ func (h *Handler) Config(w http.ResponseWriter, r *http.Request) {
 		"auth_mode":       h.cfg.Auth.Mode,
 		"storage_driver":  h.cfg.Storage.Driver,
 	})
+}
+
+func (h *Handler) SetVisibility(w http.ResponseWriter, r *http.Request) {
+	if !h.requireAdmin(w, r) {
+		return
+	}
+	site := chi.URLParam(r, "site")
+	var body struct {
+		Visibility string   `json:"visibility"`
+		Groups     []string `json:"groups"`
+	}
+	r.Body = http.MaxBytesReader(w, r.Body, 1<<20)
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		writeError(w, "invalid JSON body", http.StatusBadRequest)
+		return
+	}
+	switch body.Visibility {
+	case "private", "group", "public":
+	default:
+		writeError(w, "visibility must be private, group, or public", http.StatusBadRequest)
+		return
+	}
+	if body.Visibility == "group" && len(body.Groups) == 0 {
+		writeError(w, "groups required when visibility is group", http.StatusBadRequest)
+		return
+	}
+	ok, err := h.db.UpdateSiteVisibility(r.Context(), site, body.Visibility, body.Groups)
+	if err != nil {
+		writeError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if !ok {
+		writeError(w, "site not found", http.StatusNotFound)
+		return
+	}
+	u := auth.UserFromContext(r.Context())
+	detail, _ := json.Marshal(map[string]any{"visibility": body.Visibility, "groups": body.Groups})
+	_ = h.db.InsertAudit(r.Context(), &db.AuditEntry{
+		Timestamp: time.Now(), UserEmail: u.Email, Site: site,
+		Action: "visibility_change", Detail: string(detail),
+	})
+	writeJSON(w, map[string]string{"status": "ok"})
 }
 
 func (h *Handler) Stats(w http.ResponseWriter, r *http.Request) {
