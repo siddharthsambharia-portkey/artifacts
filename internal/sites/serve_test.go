@@ -100,3 +100,65 @@ func TestStaticHandlerServeHTTP(t *testing.T) {
 		})
 	}
 }
+
+func TestStaticHandlerCORS(t *testing.T) {
+	handler, _ := setupStaticHandler(t)
+
+	tests := []struct {
+		name            string
+		origin          string
+		wantACAO        string
+		wantCredentials bool
+	}{
+		{
+			name:            "allowed subdomain origin",
+			origin:          "http://other.localhost",
+			wantACAO:        "http://other.localhost",
+			wantCredentials: true,
+		},
+		{
+			name:     "external origin",
+			origin:   "https://evil.example.com",
+			wantACAO: "",
+		},
+		{
+			name:     "no origin",
+			origin:   "",
+			wantACAO: "",
+		},
+		{
+			name:            "apex origin",
+			origin:          "http://localhost",
+			wantACAO:        "http://localhost",
+			wantCredentials: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodGet, "/", nil)
+			req.Host = "demo.localhost:8443"
+			if tt.origin != "" {
+				req.Header.Set("Origin", tt.origin)
+			}
+			w := httptest.NewRecorder()
+			handler.ServeHTTP(w, req)
+
+			gotACAO := w.Header().Get("Access-Control-Allow-Origin")
+			if gotACAO != tt.wantACAO {
+				t.Errorf("Access-Control-Allow-Origin = %q, want %q", gotACAO, tt.wantACAO)
+			}
+			gotCreds := w.Header().Get("Access-Control-Allow-Credentials")
+			if tt.wantCredentials {
+				if gotCreds != "true" {
+					t.Errorf("Access-Control-Allow-Credentials = %q, want true", gotCreds)
+				}
+			} else if gotCreds != "" {
+				t.Errorf("Access-Control-Allow-Credentials = %q, want absent", gotCreds)
+			}
+			if gotVary := w.Header().Get("Vary"); gotVary != "Origin" {
+				t.Errorf("Vary = %q, want Origin", gotVary)
+			}
+		})
+	}
+}
