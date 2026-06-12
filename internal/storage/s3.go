@@ -6,9 +6,9 @@ import (
 	"io"
 	"os"
 
-	"github.com/siddharthsambharia-portkey/artifacts/internal/config"
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
+	"github.com/siddharthsambharia-portkey/artifacts/internal/config"
 )
 
 type S3Store struct {

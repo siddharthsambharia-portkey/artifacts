@@ -15,8 +15,8 @@ func TestFullPath(t *testing.T) {
 	}
 
 	tests := []struct {
-		name     string
-		input    string
+		name      string
+		input     string
 		wantEmpty bool
 	}{
 		{"normal relative path", "sites/demo/file.txt", false},

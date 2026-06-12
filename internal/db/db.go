@@ -17,14 +17,14 @@ type DB struct {
 }
 
 type Document struct {
-	ID        string          `json:"id"`
-	Site      string          `json:"site"`
-	Collection string         `json:"collection"`
-	Data      json.RawMessage `json:"data"`
-	CreatedBy string          `json:"created_by"`
-	UpdatedBy string          `json:"updated_by"`
-	CreatedAt time.Time       `json:"created_at"`
-	UpdatedAt time.Time       `json:"updated_at"`
+	ID         string          `json:"id"`
+	Site       string          `json:"site"`
+	Collection string          `json:"collection"`
+	Data       json.RawMessage `json:"data"`
+	CreatedBy  string          `json:"created_by"`
+	UpdatedBy  string          `json:"updated_by"`
+	CreatedAt  time.Time       `json:"created_at"`
+	UpdatedAt  time.Time       `json:"updated_at"`
 }
 
 type KVEntry struct {
@@ -34,13 +34,13 @@ type KVEntry struct {
 }
 
 type SiteRecord struct {
-	Name        string    `json:"name"`
-	Owner       string    `json:"owner,omitempty"`
-	DeployID    string    `json:"deploy_id"`
-	DeployedBy  string    `json:"deployed_by"`
-	DeployedAt  time.Time `json:"deployed_at"`
-	SizeBytes   int64     `json:"size_bytes"`
-	Visibility  string    `json:"visibility"`
+	Name       string    `json:"name"`
+	Owner      string    `json:"owner,omitempty"`
+	DeployID   string    `json:"deploy_id"`
+	DeployedBy string    `json:"deployed_by"`
+	DeployedAt time.Time `json:"deployed_at"`
+	SizeBytes  int64     `json:"size_bytes"`
+	Visibility string    `json:"visibility"`
 }
 
 type AuditEntry struct {

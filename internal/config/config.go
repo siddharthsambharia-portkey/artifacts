@@ -9,18 +9,18 @@ import (
 )
 
 type Config struct {
-	Branding    Branding    `yaml:"branding"`
-	Domain      string      `yaml:"domain"`
-	Listen        string      `yaml:"listen"`
-	TLS           TLS         `yaml:"tls"`
-	Auth          Auth        `yaml:"auth"`
-	Storage       Storage     `yaml:"storage"`
-	Database      Database    `yaml:"database"`
-	AI            AI          `yaml:"ai"`
-	Warehouse     Warehouse   `yaml:"warehouse"`
-	Notify        Notify      `yaml:"notify"`
-	Governance    Governance  `yaml:"governance"`
-	DataDir       string      `yaml:"data_dir"`
+	Branding   Branding   `yaml:"branding"`
+	Domain     string     `yaml:"domain"`
+	Listen     string     `yaml:"listen"`
+	TLS        TLS        `yaml:"tls"`
+	Auth       Auth       `yaml:"auth"`
+	Storage    Storage    `yaml:"storage"`
+	Database   Database   `yaml:"database"`
+	AI         AI         `yaml:"ai"`
+	Warehouse  Warehouse  `yaml:"warehouse"`
+	Notify     Notify     `yaml:"notify"`
+	Governance Governance `yaml:"governance"`
+	DataDir    string     `yaml:"data_dir"`
 }
 
 type Branding struct {
@@ -39,16 +39,16 @@ type Auth struct {
 }
 
 type OIDC struct {
-	Issuer            string `yaml:"issuer"`
-	ClientID          string `yaml:"client_id"`
-	ClientSecretEnv   string `yaml:"client_secret_env"`
-	GroupsClaim       string `yaml:"groups_claim"`
+	Issuer          string `yaml:"issuer"`
+	ClientID        string `yaml:"client_id"`
+	ClientSecretEnv string `yaml:"client_secret_env"`
+	GroupsClaim     string `yaml:"groups_claim"`
 }
 
 type HeaderTrust struct {
-	EmailHeader     string `yaml:"email_header"`
-	NameHeader      string `yaml:"name_header"`
-	ProxySecretEnv  string `yaml:"proxy_secret_env"`
+	EmailHeader    string `yaml:"email_header"`
+	NameHeader     string `yaml:"name_header"`
+	ProxySecretEnv string `yaml:"proxy_secret_env"`
 }
 
 type Storage struct {
@@ -65,9 +65,9 @@ type Database struct {
 }
 
 type AI struct {
-	UpstreamURL    string   `yaml:"upstream_url"`
-	APIKeyEnv      string   `yaml:"api_key_env"`
-	ImageModel     string   `yaml:"image_model"`
+	UpstreamURL     string   `yaml:"upstream_url"`
+	APIKeyEnv       string   `yaml:"api_key_env"`
+	ImageModel      string   `yaml:"image_model"`
 	ModelsAllowlist []string `yaml:"models_allowlist"`
 }
 
@@ -83,9 +83,9 @@ type Notify struct {
 }
 
 type SlackNotify struct {
-	Mode              string   `yaml:"mode"`
-	SecretEnv         string   `yaml:"secret_env"`
-	ChannelAllowlist  []string `yaml:"channel_allowlist"`
+	Mode             string   `yaml:"mode"`
+	SecretEnv        string   `yaml:"secret_env"`
+	ChannelAllowlist []string `yaml:"channel_allowlist"`
 }
 
 type Governance struct {
@@ -94,10 +94,10 @@ type Governance struct {
 }
 
 type Quotas struct {
-	SiteMaxMB                  int `yaml:"site_max_mb"`
-	DBMaxDocsPerSite           int `yaml:"db_max_docs_per_site"`
-	UploadMaxMB                int `yaml:"upload_max_mb"`
-	AIDailyTokensPerUser       int `yaml:"ai_daily_tokens_per_user"`
+	SiteMaxMB                    int `yaml:"site_max_mb"`
+	DBMaxDocsPerSite             int `yaml:"db_max_docs_per_site"`
+	UploadMaxMB                  int `yaml:"upload_max_mb"`
+	AIDailyTokensPerUser         int `yaml:"ai_daily_tokens_per_user"`
 	WarehouseDailyQueriesPerUser int `yaml:"warehouse_daily_queries_per_user"`
 }
 

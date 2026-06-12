@@ -7,8 +7,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/siddharthsambharia-portkey/artifacts/internal/storage"
 	lru "github.com/hashicorp/golang-lru/v2"
+	"github.com/siddharthsambharia-portkey/artifacts/internal/storage"
 )
 
 type DeployCache struct {
