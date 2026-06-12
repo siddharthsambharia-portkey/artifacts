@@ -1,6 +1,7 @@
 package sites
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"mime"
@@ -9,18 +10,22 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/siddharthsambharia-portkey/artifacts/internal/auth"
 	"github.com/siddharthsambharia-portkey/artifacts/internal/config"
 	"github.com/siddharthsambharia-portkey/artifacts/internal/storage"
 )
+
+type ReadAuthorizer func(ctx context.Context, user *auth.User, site string) error
 
 type StaticHandler struct {
 	cfg   *config.Config
 	store storage.Store
 	cache *DeployCache
+	authz ReadAuthorizer
 }
 
-func NewStaticHandler(cfg *config.Config, store storage.Store, cache *DeployCache) *StaticHandler {
-	return &StaticHandler{cfg: cfg, store: store, cache: cache}
+func NewStaticHandler(cfg *config.Config, store storage.Store, cache *DeployCache, authz ReadAuthorizer) *StaticHandler {
+	return &StaticHandler{cfg: cfg, store: store, cache: cache, authz: authz}
 }
 
 // allowedOrigin reports whether origin (e.g. "https://site-a.artifact.corp.com")
@@ -40,6 +45,12 @@ func (h *StaticHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if site == "" {
 		http.NotFound(w, r)
 		return
+	}
+	if h.authz != nil {
+		if err := h.authz(r.Context(), auth.UserFromContext(r.Context()), site); err != nil {
+			http.Error(w, "You do not have access to this site.", http.StatusForbidden)
+			return
+		}
 	}
 	ctx := r.Context()
 	deployID, err := h.cache.CurrentDeployID(ctx, site)

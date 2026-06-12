@@ -104,8 +104,16 @@ func (s *Server) routes() http.Handler {
 		w.Write([]byte("ok"))
 	})
 
-	staticHandler := sites.NewStaticHandler(s.cfg, s.store, s.cache)
 	gov := governance.New(s.cfg)
+	readAuthz := func(ctx context.Context, u *auth.User, site string) error {
+		if gov.IsTrustMode() {
+			return nil
+		}
+		rec, _ := s.db.GetSite(ctx, site)
+		return gov.CanReadSite(ctx, u, site, rec)
+	}
+	staticHandler := sites.NewStaticHandler(s.cfg, s.store, s.cache, readAuthz)
+	s.hub.Authz = readAuthz
 	api := NewAPI(s.cfg, s.db, gov, s.hub)
 	fileHandler := files.NewHandler(s.cfg, s.store, s.db)
 	aiHandler := ai.NewHandler(s.cfg, s.db)
@@ -224,6 +232,17 @@ func (s *Server) listSites(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		writeError(w, err.Error(), http.StatusInternalServerError)
 		return
+	}
+	gov := governance.New(s.cfg)
+	if !gov.IsTrustMode() {
+		u := auth.UserFromContext(r.Context())
+		filtered := make([]db.SiteRecord, 0, len(siteList))
+		for _, rec := range siteList {
+			if gov.CanReadSite(r.Context(), u, rec.Name, &rec) == nil {
+				filtered = append(filtered, rec)
+			}
+		}
+		siteList = filtered
 	}
 	if siteList == nil {
 		siteList = []db.SiteRecord{}
