@@ -3,6 +3,7 @@ package warehouse
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -42,10 +43,15 @@ func (h *Handler) Query(w http.ResponseWriter, r *http.Request) {
 	site := h.cfg.SiteFromHost(r.Host)
 
 	if err := h.checkDailyQuota(r, u.Email); err != nil {
-		http.Error(w, fmt.Sprintf(`{"error":%q}`, err.Error()), http.StatusTooManyRequests)
+		if isQuotaLimit(err) {
+			http.Error(w, fmt.Sprintf(`{"error":%q}`, err.Error()), http.StatusTooManyRequests)
+		} else {
+			http.Error(w, `{"error":"quota check failed"}`, http.StatusInternalServerError)
+		}
 		return
 	}
 
+	r.Body = http.MaxBytesReader(w, r.Body, 1<<20) // 1 MiB JSON cap
 	var req struct {
 		SQL string `json:"sql"`
 	}
@@ -108,19 +114,34 @@ func (h *Handler) datasetAllowed(sql string) bool {
 	return false
 }
 
+type quotaLimitError struct {
+	msg string
+}
+
+func (e quotaLimitError) Error() string { return e.msg }
+
 func (h *Handler) checkDailyQuota(r *http.Request, email string) error {
 	max := h.cfg.Governance.Quotas.WarehouseDailyQueriesPerUser
 	if max <= 0 {
 		return nil
 	}
+	cutoff := time.Now().Add(-24 * time.Hour)
 	var count int
-	_ = h.db.QueryRowContext(r.Context(),
-		`SELECT COUNT(*) FROM audit_log WHERE user_email=? AND action='warehouse_query' AND timestamp > datetime('now', '-1 day')`,
-		email).Scan(&count)
+	err := h.db.QueryRowContext(r.Context(),
+		`SELECT COUNT(*) FROM audit_log WHERE user_email=? AND action='warehouse_query' AND timestamp > ?`,
+		email, cutoff).Scan(&count)
+	if err != nil {
+		return fmt.Errorf("quota check failed: %w", err)
+	}
 	if count >= max {
-		return fmt.Errorf("daily warehouse query limit (%d) reached. Try again tomorrow or ask an admin", max)
+		return quotaLimitError{msg: fmt.Sprintf("daily warehouse query limit (%d) reached. Try again tomorrow or ask an admin", max)}
 	}
 	return nil
+}
+
+func isQuotaLimit(err error) bool {
+	var ql quotaLimitError
+	return errors.As(err, &ql)
 }
 
 // ValidateUpstreamURL ensures AI upstream is SSRF-safe (used by ai package pattern).

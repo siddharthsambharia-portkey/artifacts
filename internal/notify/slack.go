@@ -30,6 +30,7 @@ func (h *Handler) Slack(w http.ResponseWriter, r *http.Request) {
 	}
 	u := auth.UserFromContext(r.Context())
 	site := h.cfg.SiteFromHost(r.Host)
+	r.Body = http.MaxBytesReader(w, r.Body, 1<<20) // 1 MiB JSON cap
 	var req struct {
 		Channel string `json:"channel"`
 		Message string `json:"message"`
