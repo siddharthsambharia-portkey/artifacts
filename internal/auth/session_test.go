@@ -136,11 +136,10 @@ func TestSessionStoreExpiredSession(t *testing.T) {
 	}
 
 	got, err := store.Get(ctx, id)
-	// BUG: expired session returns nil error and nil user — plan 002 changes this to a non-nil error.
 	if got != nil {
 		t.Fatalf("expired session user = %v, want nil", got)
 	}
-	if err != nil {
-		t.Fatalf("expired session err = %v, want nil (today's behavior)", err)
+	if err == nil {
+		t.Fatal("expected error for expired session")
 	}
 }

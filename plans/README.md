@@ -16,7 +16,7 @@ under "Backlog" below.
 | Plan | Title | Priority | Effort | Depends on | Status |
 |------|-------|----------|--------|------------|--------|
 | 001  | Test harness + characterization tests for security-critical paths | P1 | M | — | DONE |
-| 002  | Fix expired-session nil-user bug | P1 | S | 001 (soft) | TODO |
+| 002  | Fix expired-session nil-user bug | P1 | S | 001 (soft) | DONE |
 | 003  | Enforce governed-mode visibility on static/WS/KV/listing + WS origin check | P1 | M | 001 | TODO |
 | 004  | Group-scoped visibility (ADR 0003 pre-launch requirement) | P1 | M | 003 | TODO |
 | 005  | Reflect-origin CORS on static responses (ADR 0004 pre-launch gap) | P1 | S | — | TODO |

@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/base64"
+	"fmt"
 	"time"
 
 	"github.com/siddharthsambharia-portkey/artifacts/internal/db"
@@ -36,7 +37,7 @@ func (s *SessionStore) Get(ctx context.Context, id string) (*User, error) {
 	}
 	if time.Now().After(expires) {
 		s.db.ExecContext(ctx, `DELETE FROM sessions WHERE id=?`, id)
-		return nil, err
+		return nil, fmt.Errorf("session expired")
 	}
 	return &User{Email: email, Name: name, Groups: parseGroups(groupsRaw)}, nil
 }
