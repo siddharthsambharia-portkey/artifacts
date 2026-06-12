@@ -4,7 +4,7 @@ export default defineConfig({
   build: {
     lib: {
       entry: 'src/artifact.ts',
-      name: 'artifact',
+      name: 'ArtifactSDK',
       formats: ['iife'],
       fileName: () => 'artifact.js',
     },
