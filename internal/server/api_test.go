@@ -64,6 +64,35 @@ func TestAPICreateAndList(t *testing.T) {
 	}
 }
 
+func TestAPICreateOversizedBody(t *testing.T) {
+	tmp := t.TempDir()
+	cfg := config.DefaultDev()
+	cfg.DataDir = filepath.Join(tmp, "data")
+	cfg.Database.URL = filepath.Join(tmp, "data", "test.db")
+	database, err := db.Open(cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	database.Migrate(context.Background())
+	api := NewAPI(cfg, database, governance.New(cfg), nil)
+
+	body := make([]byte, 1<<20+1)
+	for i := range body {
+		body[i] = 'a'
+	}
+	payload := append([]byte(`{"x":"`), body...)
+	payload = append(payload, `"}`...)
+
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/db/entries", bytes.NewReader(payload))
+	req.Host = "guestbook.localhost:8443"
+	req = req.WithContext(auth.WithUser(req.Context(), auth.DevUser))
+	w := httptest.NewRecorder()
+	api.handleCreate(w, req)
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("status %d body %s", w.Code, w.Body.String())
+	}
+}
+
 func TestKVGovernedMode(t *testing.T) {
 	tmp := t.TempDir()
 	cfg := config.DefaultDev()
