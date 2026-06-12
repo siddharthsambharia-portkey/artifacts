@@ -148,6 +148,7 @@ func (s *Server) routes() http.Handler {
 			r.Get("/api/v1/admin/usage", adminHandler.Usage)
 			r.Get("/api/v1/admin/config", adminHandler.Config)
 			r.Get("/api/v1/admin/stats", adminHandler.Stats)
+			r.Put("/api/v1/admin/sites/{site}/visibility", adminHandler.SetVisibility)
 		})
 
 		r.Get("/*", func(w http.ResponseWriter, r *http.Request) {
