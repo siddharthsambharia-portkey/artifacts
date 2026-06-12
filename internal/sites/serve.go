@@ -5,6 +5,7 @@ import (
 	"io"
 	"mime"
 	"net/http"
+	"net/url"
 	"path/filepath"
 	"strings"
 
@@ -20,6 +21,18 @@ type StaticHandler struct {
 
 func NewStaticHandler(cfg *config.Config, store storage.Store, cache *DeployCache) *StaticHandler {
 	return &StaticHandler{cfg: cfg, store: store, cache: cache}
+}
+
+// allowedOrigin reports whether origin (e.g. "https://site-a.artifact.corp.com")
+// is another site on this Artifact instance, per ADR 0004.
+func (h *StaticHandler) allowedOrigin(origin string) bool {
+	u, err := url.Parse(origin)
+	if err != nil || u.Host == "" {
+		return false
+	}
+	host := strings.Split(u.Host, ":")[0]
+	d := h.cfg.Domain
+	return host == d || strings.HasSuffix(host, "."+d)
 }
 
 func (h *StaticHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -62,6 +75,11 @@ func (h *StaticHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Disposition", "attachment")
 		w.Header().Set("Content-Security-Policy", "default-src 'none'")
 	}
+	if origin := r.Header.Get("Origin"); origin != "" && h.allowedOrigin(origin) {
+		w.Header().Set("Access-Control-Allow-Origin", origin)
+		w.Header().Set("Access-Control-Allow-Credentials", "true")
+	}
+	w.Header().Set("Vary", "Origin")
 	if r.Header.Get("If-None-Match") == `"`+info.ETag+`"` {
 		w.WriteHeader(http.StatusNotModified)
 		return
