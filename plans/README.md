@@ -22,7 +22,7 @@ under "Backlog" below.
 | 005  | Reflect-origin CORS on static responses (ADR 0004 pre-launch gap) | P1 | S | — | TODO |
 | 006  | Harden warehouse SQL guards (UNION/multi-statement/LIMIT bypass) | P2 | M | 001 | TODO |
 | 007  | Quota portability (Postgres), usage indexes, JSON body caps | P2 | M | — (merge after 006) | DONE |
-| 008  | HTTP deploy API — `POST /api/v1/deploy` (multipart files or zip) | P1 | M | — | TODO |
+| 008  | HTTP deploy API — `POST /api/v1/deploy` (multipart files or zip) | P1 | M | — | DONE |
 | 009  | Design system — Geist-inspired tokens + redesign of Artifact pages | P1 | M | — | DONE |
 | 010  | Drop-to-Deploy UI on the home page | P1 | M | 008, 009 | TODO |
 
@@ -35,13 +35,13 @@ Status values: TODO | IN PROGRESS | DONE | BLOCKED (with one-line reason) | REJE
 - 006 before 007 (ordering, not dependency): both edit `internal/warehouse/warehouse.go`; sequencing avoids conflicts.
 - 004 and 007 both add a DB migration; whichever lands second takes the next number (004 expects `004_visibility_groups.sql`, 007 expects `005_usage_indexes.sql` — renumber if landed out of order). Plan 007 uses **`005_usage_indexes.sql`** (004 visibility migration was present at execution time).
 - **Before any of this**: commit the untracked `internal/db/migrations/003_ai_usage_calls.sql` — fresh checkouts currently get a different schema than the working tree (one-line fix, no plan needed).
-- 008 before 010: the Drop UI consumes the deploy endpoint's exact multipart contract.
-- 009 before 010: the Drop UI composes `/ui.css` component classes and unhides `#new-site`.
-- 008 and 009 are independent and can run in parallel (008 adds routes, 009 adds `/ui.css` + rewrites HTML).
+- 008 before 010: the Drop UI consumes the deploy endpoint's exact multipart contract (`site`/`files`/`zip`/`confirm_overwrite`; 200/409/422 shapes).
+- 009 before 010: the Drop UI composes the `/ui.css` component classes and unhides the `#new-site` button that 009's home page ships hidden.
+- 008 and 009 are independent of each other and can run in parallel (008 touches `server.go` routes, 009 touches `server.go` for `/ui.css` — coordinate the merge).
 
 ## Backlog (audited, real, not yet planned)
 
-- **CLI deploy bypasses the server entirely** (`internal/cli/deploy.go:30-57` opens storage+DB directly and deploys as the hardcoded `auth.DevUser`): remote Builders can't deploy without bucket credentials, and governed-mode ownership is meaningless via CLI (every site is owned by `dev@localhost`). The durable fix is an authenticated `POST /api/v1/deploy` endpoint + CLI client mode — L effort, design needed (how does the CLI authenticate? device flow / token). Highest-value unplanned item; pairs with the MCP server which has the same architecture.
+- **CLI deploy bypasses the server entirely** (`internal/cli/deploy.go:30-57` opens storage+DB directly and deploys as the hardcoded `auth.DevUser`): remote Builders can't deploy without bucket credentials, and governed-mode ownership is meaningless via CLI (every site is owned by `dev@localhost`). The endpoint half is now **plan 008**; remaining: CLI client mode (how does the CLI authenticate? device flow / token) and MCP parity, both still unplanned (L effort, auth design needed).
 - **Header-trust mode hardcodes `Groups: ["employees"]`** (`internal/auth/header_trust.go:38`): no admins and no group-scoped visibility possible in the enterprise auth mode. Needs a configurable groups header. S/M.
 - **CSRF hardening for governed mode**: `SameSite=Lax` blocks external sites, but sibling subdomains are same-site; a malicious deployed site can fire simple-content-type POSTs as the visiting owner. M effort (token via `/api/v1/me`, SDK attaches header).
 - **Realtime hub hygiene**: empty rooms never removed from `hub.rooms`, `events` channel never closed, write errors ignored in `writePump`, rate-limiter bucket map never pruned. S each, bundle as one cleanup PR.

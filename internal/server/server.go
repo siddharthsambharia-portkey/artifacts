@@ -112,6 +112,7 @@ func (s *Server) routes() http.Handler {
 	limiter := ratelimit.New(20, 50)
 	aiLimiter := ratelimit.New(5, 10)
 	whLimiter := ratelimit.New(2, 5)
+	deployLimiter := ratelimit.New(0.2, 3)
 
 	r.Group(func(r chi.Router) {
 		r.Use(s.auth.Middleware)
@@ -135,6 +136,7 @@ func (s *Server) routes() http.Handler {
 			if whHandler != nil {
 				r.With(ratelimit.Middleware(whLimiter, rateKey)).Post("/api/v1/warehouse/query", whHandler.Query)
 			}
+			r.With(ratelimit.Middleware(deployLimiter, rateKey)).Post("/api/v1/deploy", s.handleDeploy)
 			r.Post("/api/v1/notify/slack", notifyHandler.Slack)
 			r.Get("/ws", s.hub.ServeWS)
 			r.Get("/api/v1/admin/audit", adminHandler.Audit)
@@ -260,6 +262,7 @@ func (s *Server) DB() *db.DB                   { return s.db }
 func (s *Server) Store() storage.Store         { return s.store }
 func (s *Server) Deployer() *sites.Deployer    { return s.deployer }
 func (s *Server) Hub() *realtime.Hub           { return s.hub }
+func (s *Server) Handler() http.Handler        { return s.http.Handler }
 
 func ensureDataDir(cfg *config.Config) error {
 	if cfg.DataDir == "" {
