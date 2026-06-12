@@ -24,7 +24,7 @@ under "Backlog" below.
 | 007  | Quota portability (Postgres), usage indexes, JSON body caps | P2 | M | — (merge after 006) | DONE |
 | 008  | HTTP deploy API — `POST /api/v1/deploy` (multipart files or zip) | P1 | M | — | DONE |
 | 009  | Design system — Geist-inspired tokens + redesign of Artifact pages | P1 | M | — | DONE |
-| 010  | Drop-to-Deploy UI on the home page | P1 | M | 008, 009 | TODO |
+| 010  | Drop-to-Deploy UI on the home page | P1 | M | 008, 009 | DONE |
 
 Status values: TODO | IN PROGRESS | DONE | BLOCKED (with one-line reason) | REJECTED (with one-line rationale)
 
@@ -41,7 +41,7 @@ Status values: TODO | IN PROGRESS | DONE | BLOCKED (with one-line reason) | REJE
 
 ## Backlog (audited, real, not yet planned)
 
-- **CLI deploy bypasses the server entirely** (`internal/cli/deploy.go:30-57` opens storage+DB directly and deploys as the hardcoded `auth.DevUser`): remote Builders can't deploy without bucket credentials, and governed-mode ownership is meaningless via CLI (every site is owned by `dev@localhost`). The endpoint half is now **plan 008**; remaining: CLI client mode (how does the CLI authenticate? device flow / token) and MCP parity, both still unplanned (L effort, auth design needed).
+- **CLI deploy bypasses the server entirely** (`internal/cli/deploy.go:30-57` opens storage+DB directly and deploys as the hardcoded `auth.DevUser`): remote Builders can't deploy without bucket credentials, and governed-mode ownership is meaningless via CLI (every site is owned by `dev@localhost`). The durable fix is an authenticated `POST /api/v1/deploy` endpoint + CLI client mode — L effort, design needed (how does the CLI authenticate? device flow / token). Highest-value unplanned item; pairs with the MCP server which has the same architecture.
 - **Header-trust mode hardcodes `Groups: ["employees"]`** (`internal/auth/header_trust.go:38`): no admins and no group-scoped visibility possible in the enterprise auth mode. Needs a configurable groups header. S/M.
 - **CSRF hardening for governed mode**: `SameSite=Lax` blocks external sites, but sibling subdomains are same-site; a malicious deployed site can fire simple-content-type POSTs as the visiting owner. M effort (token via `/api/v1/me`, SDK attaches header).
 - **Realtime hub hygiene**: empty rooms never removed from `hub.rooms`, `events` channel never closed, write errors ignored in `writePump`, rate-limiter bucket map never pruned. S each, bundle as one cleanup PR.
