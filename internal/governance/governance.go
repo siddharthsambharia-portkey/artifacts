@@ -53,8 +53,16 @@ func (g *Governor) CanReadSite(ctx context.Context, user *auth.User, site string
 	if existing.Visibility == "public" {
 		return nil
 	}
+	if user == nil {
+		return fmt.Errorf("governed mode: you do not have access to site %q", site)
+	}
 	if existing.Owner == user.Email {
 		return nil
+	}
+	for _, grp := range user.Groups {
+		if grp == "admins" {
+			return nil
+		}
 	}
 	return fmt.Errorf("governed mode: you do not have access to site %q", site)
 }
