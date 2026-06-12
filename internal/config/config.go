@@ -97,7 +97,7 @@ type Quotas struct {
 	SiteMaxMB                  int `yaml:"site_max_mb"`
 	DBMaxDocsPerSite           int `yaml:"db_max_docs_per_site"`
 	UploadMaxMB                int `yaml:"upload_max_mb"`
-	AIDailyTokensPerUser       int `yaml:"ai_daily_tokens_per_user"`
+	AIDailyCallsPerUser        int `yaml:"ai_daily_calls_per_user"`
 	WarehouseDailyQueriesPerUser int `yaml:"warehouse_daily_queries_per_user"`
 }
 
@@ -133,7 +133,7 @@ func DefaultDev() *Config {
 				SiteMaxMB:                    500,
 				DBMaxDocsPerSite:             100000,
 				UploadMaxMB:                  50,
-				AIDailyTokensPerUser:         0,
+				AIDailyCallsPerUser:          0,
 				WarehouseDailyQueriesPerUser: 200,
 			},
 		},

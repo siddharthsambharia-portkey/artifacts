@@ -27,6 +27,6 @@ governance:
     site_max_mb: 500
     db_max_docs_per_site: 100000
     upload_max_mb: 50
-    ai_daily_tokens_per_user: 50000
+    ai_daily_calls_per_user: 500
     warehouse_daily_queries_per_user: 200
 data_dir: /var/lib/artifact
