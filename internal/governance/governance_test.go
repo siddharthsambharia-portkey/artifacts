@@ -156,12 +156,25 @@ func TestCanReadSite(t *testing.T) {
 			wantErr:  false,
 		},
 		{
-			name: "governed admin cannot read private site today",
-			// plan 003 revisits this — admins bypass added there
+			name:     "governed admin can read private site",
 			mode:     "governed",
 			user:     &auth.User{Email: "b@co", Groups: []string{"admins"}},
 			existing: &db.SiteRecord{Owner: "a@co", Visibility: "private"},
+			wantErr:  false,
+		},
+		{
+			name:     "governed nil user private denied",
+			mode:     "governed",
+			user:     nil,
+			existing: &db.SiteRecord{Owner: "a@co", Visibility: "private"},
 			wantErr:  true,
+		},
+		{
+			name:     "governed nil user public allowed",
+			mode:     "governed",
+			user:     nil,
+			existing: &db.SiteRecord{Owner: "a@co", Visibility: "public"},
+			wantErr:  false,
 		},
 		{
 			name:     "governed non-owner private denied",

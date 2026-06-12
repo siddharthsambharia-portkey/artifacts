@@ -71,6 +71,7 @@ func (a *API) handleCreate(w http.ResponseWriter, r *http.Request) {
 		writeError(w, err.Error(), http.StatusForbidden)
 		return
 	}
+	r.Body = http.MaxBytesReader(w, r.Body, 1<<20) // 1 MiB JSON cap
 	var data json.RawMessage
 	if err := json.NewDecoder(r.Body).Decode(&data); err != nil {
 		writeError(w, "Invalid JSON body.", http.StatusBadRequest)
@@ -141,6 +142,7 @@ func (a *API) handleUpdate(w http.ResponseWriter, r *http.Request) {
 		writeError(w, "Document not found.", http.StatusNotFound)
 		return
 	}
+	r.Body = http.MaxBytesReader(w, r.Body, 1<<20) // 1 MiB JSON cap
 	var data json.RawMessage
 	if err := json.NewDecoder(r.Body).Decode(&data); err != nil {
 		writeError(w, "Invalid JSON body.", http.StatusBadRequest)
@@ -180,8 +182,15 @@ func (a *API) handleDelete(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *API) handleKVSet(w http.ResponseWriter, r *http.Request) {
+	u := auth.UserFromContext(r.Context())
 	site := a.siteFromRequest(r)
 	key := chi.URLParam(r, "key")
+	existing, _ := a.db.GetSite(r.Context(), site)
+	if err := a.gov.CanWriteDB(r.Context(), u, site, existing); err != nil {
+		writeError(w, err.Error(), http.StatusForbidden)
+		return
+	}
+	r.Body = http.MaxBytesReader(w, r.Body, 1<<20) // 1 MiB JSON cap
 	var body struct {
 		Value string `json:"value"`
 	}
@@ -197,8 +206,14 @@ func (a *API) handleKVSet(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *API) handleKVGet(w http.ResponseWriter, r *http.Request) {
+	u := auth.UserFromContext(r.Context())
 	site := a.siteFromRequest(r)
 	key := chi.URLParam(r, "key")
+	existing, _ := a.db.GetSite(r.Context(), site)
+	if err := a.gov.CanReadSite(r.Context(), u, site, existing); err != nil {
+		writeError(w, err.Error(), http.StatusForbidden)
+		return
+	}
 	v, err := a.db.GetKV(r.Context(), site, key)
 	if err != nil {
 		writeError(w, "Key not found.", http.StatusNotFound)

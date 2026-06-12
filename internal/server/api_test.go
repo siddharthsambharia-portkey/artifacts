@@ -63,6 +63,61 @@ func TestAPICreateAndList(t *testing.T) {
 	}
 }
 
+func TestKVGovernedMode(t *testing.T) {
+	tmp := t.TempDir()
+	cfg := config.DefaultDev()
+	cfg.Governance.Mode = "governed"
+	cfg.DataDir = filepath.Join(tmp, "data")
+	cfg.Database.URL = filepath.Join(tmp, "data", "test.db")
+	database, err := db.Open(cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	database.Migrate(context.Background())
+	if err := database.UpsertSite(context.Background(), &db.SiteRecord{
+		Name: "private-site", Owner: "alice@co", Visibility: "private",
+	}); err != nil {
+		t.Fatal(err)
+	}
+	api := NewAPI(cfg, database, governance.New(cfg), nil)
+
+	alice := &auth.User{Email: "alice@co", Groups: []string{"employees"}}
+	bob := &auth.User{Email: "bob@co", Groups: []string{"employees"}}
+
+	t.Run("kv set non-owner denied", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodPut, "/api/v1/kv/theme", bytes.NewReader([]byte(`{"value":"dark"}`)))
+		req.Host = "private-site.localhost:8443"
+		req = req.WithContext(auth.WithUser(req.Context(), bob))
+		w := httptest.NewRecorder()
+		api.handleKVSet(w, req)
+		if w.Code != http.StatusForbidden {
+			t.Fatalf("status %d body %s", w.Code, w.Body.String())
+		}
+	})
+
+	t.Run("kv set owner allowed", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodPut, "/api/v1/kv/theme", bytes.NewReader([]byte(`{"value":"dark"}`)))
+		req.Host = "private-site.localhost:8443"
+		req = req.WithContext(auth.WithUser(req.Context(), alice))
+		w := httptest.NewRecorder()
+		api.handleKVSet(w, req)
+		if w.Code != http.StatusOK {
+			t.Fatalf("status %d body %s", w.Code, w.Body.String())
+		}
+	})
+
+	t.Run("kv get non-owner denied", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/api/v1/kv/theme", nil)
+		req.Host = "private-site.localhost:8443"
+		req = req.WithContext(auth.WithUser(req.Context(), bob))
+		w := httptest.NewRecorder()
+		api.handleKVGet(w, req)
+		if w.Code != http.StatusForbidden {
+			t.Fatalf("status %d body %s", w.Code, w.Body.String())
+		}
+	})
+}
+
 func TestGenerateIDUnique(t *testing.T) {
 	a := generateID()
 	b := generateID()
