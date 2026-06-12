@@ -31,15 +31,18 @@ func (p *postgresQuerier) Query(ctx context.Context, sqlText string, rowLimit in
 		return nil, err
 	}
 	defer rows.Close()
-	return scanRows(rows)
+	return scanRows(rows, rowLimit)
 }
 
 func (p *postgresQuerier) Close() error { return p.db.Close() }
 
-func scanRows(rows *sql.Rows) ([]map[string]any, error) {
+func scanRows(rows *sql.Rows, rowLimit int) ([]map[string]any, error) {
 	cols, _ := rows.Columns()
 	var result []map[string]any
 	for rows.Next() {
+		if len(result) >= rowLimit {
+			break
+		}
 		vals := make([]any, len(cols))
 		ptrs := make([]any, len(cols))
 		for i := range vals {
@@ -54,5 +57,5 @@ func scanRows(rows *sql.Rows) ([]map[string]any, error) {
 		}
 		result = append(result, row)
 	}
-	return result, nil
+	return result, rows.Err()
 }
