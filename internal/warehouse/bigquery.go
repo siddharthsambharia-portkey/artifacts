@@ -47,6 +47,9 @@ func (b *bigQueryQuerier) Query(ctx context.Context, sqlText string, rowLimit in
 		if err != nil {
 			return nil, err
 		}
+		if len(result) >= rowLimit {
+			break
+		}
 		m := make(map[string]any)
 		for i, s := range it.Schema {
 			if i < len(row) {

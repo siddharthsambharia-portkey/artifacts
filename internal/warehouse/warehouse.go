@@ -16,7 +16,8 @@ import (
 )
 
 var selectOnly = regexp.MustCompile(`(?i)^\s*SELECT\b`)
-var denyPatterns = regexp.MustCompile(`(?i)\b(INSERT|UPDATE|DELETE|DROP|ALTER|CREATE|TRUNCATE|GRANT|REVOKE|EXEC|EXECUTE)\b`)
+var denyPatterns = regexp.MustCompile(`(?i)\b(INSERT|UPDATE|DELETE|DROP|ALTER|CREATE|TRUNCATE|GRANT|REVOKE|EXEC|EXECUTE|UNION|INTO|MERGE|CALL)\b`)
+var denyTokens = regexp.MustCompile(`;|--|/\*`)
 
 type Handler struct {
 	cfg     *config.Config
@@ -60,6 +61,10 @@ func (h *Handler) Query(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, `{"error":"Query contains forbidden keywords. Only SELECT is allowed."}`, http.StatusForbidden)
 		return
 	}
+	if denyTokens.MatchString(req.SQL) {
+		http.Error(w, `{"error":"Query contains forbidden tokens (;, comments) — submit a single plain SELECT."}`, http.StatusForbidden)
+		return
+	}
 	if !h.datasetAllowed(req.SQL) {
 		http.Error(w, `{"error":"Query references a dataset not in warehouse.allowed_datasets. Ask an admin to add it."}`, http.StatusForbidden)
 		return
@@ -87,7 +92,7 @@ func (h *Handler) Query(w http.ResponseWriter, r *http.Request) {
 		Site: site, Action: "warehouse_query", Detail: detail,
 	})
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]any{"rows": rows})
+	json.NewEncoder(w).Encode(map[string]any{"rows": rows, "truncated": len(rows) >= limit})
 }
 
 func (h *Handler) datasetAllowed(sql string) bool {
