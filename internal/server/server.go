@@ -9,6 +9,9 @@ import (
 	"os"
 	"time"
 
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
+	"github.com/nats-io/nats.go"
 	"github.com/siddharthsambharia-portkey/artifacts/internal/admin"
 	"github.com/siddharthsambharia-portkey/artifacts/internal/ai"
 	"github.com/siddharthsambharia-portkey/artifacts/internal/auth"
@@ -22,9 +25,6 @@ import (
 	"github.com/siddharthsambharia-portkey/artifacts/internal/sites"
 	"github.com/siddharthsambharia-portkey/artifacts/internal/storage"
 	"github.com/siddharthsambharia-portkey/artifacts/internal/warehouse"
-	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/chi/v5/middleware"
-	"github.com/nats-io/nats.go"
 )
 
 //go:embed static/*
@@ -92,7 +92,11 @@ func New(cfg *config.Config, logger *slog.Logger) (*Server, error) {
 func (s *Server) routes() http.Handler {
 	r := chi.NewRouter()
 	r.Use(middleware.RequestID)
-	r.Use(middleware.RealIP)
+	// RealIP resolves the client IP from proxy headers so rateKey rate-limits per
+	// real client rather than per proxy. This service is expected to run behind a
+	// trusted proxy that sets these headers, so the spoofing risk noted in the
+	// deprecation does not apply here.
+	r.Use(middleware.RealIP) //nolint:staticcheck // SA1019: intentional, runs behind a trusted proxy
 	r.Use(middleware.Recoverer)
 	r.Use(s.loggingMiddleware)
 	r.Get("/healthz", func(w http.ResponseWriter, r *http.Request) {
@@ -257,12 +261,12 @@ func (s *Server) Shutdown(ctx context.Context) error {
 	return s.http.Shutdown(ctx)
 }
 
-func (s *Server) Config() *config.Config       { return s.cfg }
-func (s *Server) DB() *db.DB                   { return s.db }
-func (s *Server) Store() storage.Store         { return s.store }
-func (s *Server) Deployer() *sites.Deployer    { return s.deployer }
-func (s *Server) Hub() *realtime.Hub           { return s.hub }
-func (s *Server) Handler() http.Handler        { return s.http.Handler }
+func (s *Server) Config() *config.Config    { return s.cfg }
+func (s *Server) DB() *db.DB                { return s.db }
+func (s *Server) Store() storage.Store      { return s.store }
+func (s *Server) Deployer() *sites.Deployer { return s.deployer }
+func (s *Server) Hub() *realtime.Hub        { return s.hub }
+func (s *Server) Handler() http.Handler     { return s.http.Handler }
 
 func ensureDataDir(cfg *config.Config) error {
 	if cfg.DataDir == "" {

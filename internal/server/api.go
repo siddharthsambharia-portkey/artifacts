@@ -9,18 +9,18 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/siddharthsambharia-portkey/artifacts/internal/auth"
 	"github.com/siddharthsambharia-portkey/artifacts/internal/config"
 	"github.com/siddharthsambharia-portkey/artifacts/internal/db"
 	"github.com/siddharthsambharia-portkey/artifacts/internal/governance"
 	"github.com/siddharthsambharia-portkey/artifacts/internal/realtime"
-	"github.com/go-chi/chi/v5"
 )
 
 type API struct {
-	cfg   *config.Config
-	db    *db.DB
-	gov   *governance.Governor
+	cfg    *config.Config
+	db     *db.DB
+	gov    *governance.Governor
 	events realtime.EventPublisher
 }
 

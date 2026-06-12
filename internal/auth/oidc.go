@@ -11,9 +11,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/coreos/go-oidc/v3/oidc"
 	"github.com/siddharthsambharia-portkey/artifacts/internal/config"
 	"github.com/siddharthsambharia-portkey/artifacts/internal/db"
-	"github.com/coreos/go-oidc/v3/oidc"
 	"golang.org/x/oauth2"
 )
 

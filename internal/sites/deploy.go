@@ -22,12 +22,12 @@ import (
 )
 
 type Manifest struct {
-	Site      string            `json:"site"`
-	DeployID  string            `json:"deploy_id"`
-	Files     map[string]string `json:"files"` // path -> sha256
-	DeployedBy string           `json:"deployed_by"`
-	DeployedAt time.Time        `json:"deployed_at"`
-	TotalBytes int64            `json:"total_bytes"`
+	Site       string            `json:"site"`
+	DeployID   string            `json:"deploy_id"`
+	Files      map[string]string `json:"files"` // path -> sha256
+	DeployedBy string            `json:"deployed_by"`
+	DeployedAt time.Time         `json:"deployed_at"`
+	TotalBytes int64             `json:"total_bytes"`
 }
 
 type Deployer struct {
@@ -56,7 +56,7 @@ func (d *Deployer) Deploy(ctx context.Context, siteName, sourceDir string, user 
 	deployID := fmt.Sprintf("%d", time.Now().UnixNano())
 	manifest := &Manifest{
 		Site: siteName, DeployID: deployID,
-		Files: make(map[string]string),
+		Files:      make(map[string]string),
 		DeployedBy: user.Email, DeployedAt: time.Now(),
 	}
 	prefix := fmt.Sprintf("sites/%s/deploys/%s/", siteName, deployID)
@@ -161,7 +161,7 @@ func validSiteName(name string) bool {
 		return false
 	}
 	for _, c := range name {
-		if !((c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c == '-') {
+		if (c < 'a' || c > 'z') && (c < '0' || c > '9') && c != '-' {
 			return false
 		}
 	}
