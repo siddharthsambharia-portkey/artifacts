@@ -12,11 +12,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Drop-to-deploy: drag a folder, file, or zip onto the home page to publish a site, no CLI required
 - HTTP deploy API (`POST /api/v1/deploy`) accepting multipart `files` or a `zip` part, with overwrite confirmation and per-site size quotas
 - Design system with shared tokens served at `/ui.css`; redesigned home, admin console, and error pages
+- Group-scoped site visibility — sites can be limited to members of a named IdP group, with an admin endpoint to set visibility
+- Reflect-origin CORS on static responses, enabling cross-site script/asset imports between sites on the instance
+- Per-table usage indexes on `audit_log`, `ai_usage`, and `uploaded_files`
 - Characterization test suite pinning security-critical behavior (governance, sessions, warehouse query guards, rate limiting)
+
+### Changed
+
+- AI daily quota now counts requests (`ai_daily_calls_per_user`) instead of tokens; the `ai_usage.tokens` column is dropped
 
 ### Fixed
 
 - Expired sessions now return an error instead of a nil authenticated user
+- Governed-mode visibility is now enforced on static serving, WebSockets, KV, and site listing; WebSocket connections validate request Origin
+- Warehouse query guards reject `UNION`, multi-statement, and `LIMIT`-bypass attempts
+- Daily quota checks are portable across SQLite and Postgres (no SQLite-only date functions); oversized JSON request bodies are rejected
 
 ## [0.1.0] - 2026-06-11
 
