@@ -1,25 +1,43 @@
 package sites
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"mime"
 	"net/http"
+	"net/url"
 	"path/filepath"
 	"strings"
 
+	"github.com/siddharthsambharia-portkey/artifacts/internal/auth"
 	"github.com/siddharthsambharia-portkey/artifacts/internal/config"
 	"github.com/siddharthsambharia-portkey/artifacts/internal/storage"
 )
+
+type ReadAuthorizer func(ctx context.Context, user *auth.User, site string) error
 
 type StaticHandler struct {
 	cfg   *config.Config
 	store storage.Store
 	cache *DeployCache
+	authz ReadAuthorizer
 }
 
-func NewStaticHandler(cfg *config.Config, store storage.Store, cache *DeployCache) *StaticHandler {
-	return &StaticHandler{cfg: cfg, store: store, cache: cache}
+func NewStaticHandler(cfg *config.Config, store storage.Store, cache *DeployCache, authz ReadAuthorizer) *StaticHandler {
+	return &StaticHandler{cfg: cfg, store: store, cache: cache, authz: authz}
+}
+
+// allowedOrigin reports whether origin (e.g. "https://site-a.artifact.corp.com")
+// is another site on this Artifact instance, per ADR 0004.
+func (h *StaticHandler) allowedOrigin(origin string) bool {
+	u, err := url.Parse(origin)
+	if err != nil || u.Host == "" {
+		return false
+	}
+	host := strings.Split(u.Host, ":")[0]
+	d := h.cfg.Domain
+	return host == d || strings.HasSuffix(host, "."+d)
 }
 
 func (h *StaticHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -27,6 +45,12 @@ func (h *StaticHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if site == "" {
 		http.NotFound(w, r)
 		return
+	}
+	if h.authz != nil {
+		if err := h.authz(r.Context(), auth.UserFromContext(r.Context()), site); err != nil {
+			http.Error(w, "You do not have access to this site.", http.StatusForbidden)
+			return
+		}
 	}
 	ctx := r.Context()
 	deployID, err := h.cache.CurrentDeployID(ctx, site)
@@ -62,6 +86,11 @@ func (h *StaticHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Disposition", "attachment")
 		w.Header().Set("Content-Security-Policy", "default-src 'none'")
 	}
+	if origin := r.Header.Get("Origin"); origin != "" && h.allowedOrigin(origin) {
+		w.Header().Set("Access-Control-Allow-Origin", origin)
+		w.Header().Set("Access-Control-Allow-Credentials", "true")
+	}
+	w.Header().Set("Vary", "Origin")
 	if r.Header.Get("If-None-Match") == `"`+info.ETag+`"` {
 		w.WriteHeader(http.StatusNotModified)
 		return

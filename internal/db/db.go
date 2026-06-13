@@ -34,13 +34,14 @@ type KVEntry struct {
 }
 
 type SiteRecord struct {
-	Name       string    `json:"name"`
-	Owner      string    `json:"owner,omitempty"`
-	DeployID   string    `json:"deploy_id"`
-	DeployedBy string    `json:"deployed_by"`
-	DeployedAt time.Time `json:"deployed_at"`
-	SizeBytes  int64     `json:"size_bytes"`
-	Visibility string    `json:"visibility"`
+	Name             string    `json:"name"`
+	Owner            string    `json:"owner,omitempty"`
+	DeployID         string    `json:"deploy_id"`
+	DeployedBy       string    `json:"deployed_by"`
+	DeployedAt       time.Time `json:"deployed_at"`
+	SizeBytes        int64     `json:"size_bytes"`
+	Visibility       string    `json:"visibility"`
+	VisibilityGroups []string  `json:"visibility_groups"`
 }
 
 type AuditEntry struct {
@@ -55,7 +56,6 @@ type AuditEntry struct {
 type AIUsage struct {
 	UserEmail string    `json:"user_email"`
 	Site      string    `json:"site"`
-	Tokens    int       `json:"tokens"`
 	Timestamp time.Time `json:"timestamp"`
 }
 
@@ -157,40 +157,58 @@ func (d *DB) GetKV(ctx context.Context, site, key string) (string, error) {
 }
 
 func (d *DB) UpsertSite(ctx context.Context, s *SiteRecord) error {
+	groupsJSON := marshalVisibilityGroups(s.VisibilityGroups)
 	_, err := d.ExecContext(ctx,
-		`INSERT INTO sites (name, owner, deploy_id, deployed_by, deployed_at, size_bytes, visibility)
-		 VALUES (?, ?, ?, ?, ?, ?, ?)
+		`INSERT INTO sites (name, owner, deploy_id, deployed_by, deployed_at, size_bytes, visibility, visibility_groups)
+		 VALUES (?, ?, ?, ?, ?, ?, ?, ?)
 		 ON CONFLICT(name) DO UPDATE SET deploy_id=excluded.deploy_id, deployed_by=excluded.deployed_by,
 		 deployed_at=excluded.deployed_at, size_bytes=excluded.size_bytes`,
-		s.Name, s.Owner, s.DeployID, s.DeployedBy, s.DeployedAt, s.SizeBytes, s.Visibility)
+		s.Name, s.Owner, s.DeployID, s.DeployedBy, s.DeployedAt, s.SizeBytes, s.Visibility, groupsJSON)
 	return shimExec(err, d.driver)
+}
+
+func (d *DB) UpdateSiteVisibility(ctx context.Context, name, visibility string, groups []string) (bool, error) {
+	groupsJSON := "[]"
+	if visibility == "group" {
+		groupsJSON = marshalVisibilityGroups(groups)
+	}
+	res, err := d.ExecContext(ctx,
+		`UPDATE sites SET visibility=?, visibility_groups=? WHERE name=?`,
+		visibility, groupsJSON, name)
+	if err != nil {
+		return false, shimExec(err, d.driver)
+	}
+	n, err := res.RowsAffected()
+	if err != nil {
+		return false, err
+	}
+	return n > 0, nil
 }
 
 func (d *DB) GetSite(ctx context.Context, name string) (*SiteRecord, error) {
 	row := d.QueryRowContext(ctx,
-		`SELECT name, owner, deploy_id, deployed_by, deployed_at, size_bytes, visibility FROM sites WHERE name=?`, name)
-	var s SiteRecord
-	err := row.Scan(&s.Name, &s.Owner, &s.DeployID, &s.DeployedBy, &s.DeployedAt, &s.SizeBytes, &s.Visibility)
-	if err == sql.ErrNoRows {
-		return nil, nil
+		`SELECT name, owner, deploy_id, deployed_by, deployed_at, size_bytes, visibility, visibility_groups FROM sites WHERE name=?`, name)
+	s, err := scanSite(row)
+	if err != nil {
+		return nil, shimQuery(err, d.driver)
 	}
-	return &s, shimQuery(err, d.driver)
+	return s, nil
 }
 
 func (d *DB) ListSites(ctx context.Context) ([]SiteRecord, error) {
 	rows, err := d.QueryContext(ctx,
-		`SELECT name, owner, deploy_id, deployed_by, deployed_at, size_bytes, visibility FROM sites ORDER BY deployed_at DESC`)
+		`SELECT name, owner, deploy_id, deployed_by, deployed_at, size_bytes, visibility, visibility_groups FROM sites ORDER BY deployed_at DESC`)
 	if err != nil {
 		return nil, shimQuery(err, d.driver)
 	}
 	defer rows.Close()
 	var sites []SiteRecord
 	for rows.Next() {
-		var s SiteRecord
-		if err := rows.Scan(&s.Name, &s.Owner, &s.DeployID, &s.DeployedBy, &s.DeployedAt, &s.SizeBytes, &s.Visibility); err != nil {
+		s, err := scanSite(rows)
+		if err != nil {
 			return nil, err
 		}
-		sites = append(sites, s)
+		sites = append(sites, *s)
 	}
 	return sites, nil
 }
@@ -233,8 +251,8 @@ func (d *DB) SearchAudit(ctx context.Context, site, user string, limit int) ([]A
 
 func (d *DB) InsertAIUsage(ctx context.Context, u *AIUsage) error {
 	_, err := d.ExecContext(ctx,
-		`INSERT INTO ai_usage (user_email, site, tokens, timestamp) VALUES (?, ?, ?, ?)`,
-		u.UserEmail, u.Site, u.Tokens, u.Timestamp)
+		`INSERT INTO ai_usage (user_email, site, timestamp) VALUES (?, ?, ?)`,
+		u.UserEmail, u.Site, u.Timestamp)
 	return shimExec(err, d.driver)
 }
 
@@ -245,4 +263,44 @@ func scanDocument(row *sql.Row) (*Document, error) {
 		return nil, nil
 	}
 	return &doc, err
+}
+
+func marshalVisibilityGroups(groups []string) string {
+	if groups == nil {
+		groups = []string{}
+	}
+	b, err := json.Marshal(groups)
+	if err != nil {
+		return "[]"
+	}
+	return string(b)
+}
+
+func unmarshalVisibilityGroups(raw string) []string {
+	if raw == "" {
+		return []string{}
+	}
+	var groups []string
+	if err := json.Unmarshal([]byte(raw), &groups); err != nil {
+		return []string{}
+	}
+	return groups
+}
+
+type scannable interface {
+	Scan(dest ...any) error
+}
+
+func scanSite(row scannable) (*SiteRecord, error) {
+	var s SiteRecord
+	var groupsJSON string
+	err := row.Scan(&s.Name, &s.Owner, &s.DeployID, &s.DeployedBy, &s.DeployedAt, &s.SizeBytes, &s.Visibility, &groupsJSON)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	s.VisibilityGroups = unmarshalVisibilityGroups(groupsJSON)
+	return &s, nil
 }

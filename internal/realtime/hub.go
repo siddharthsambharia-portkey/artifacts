@@ -20,6 +20,7 @@ type Hub struct {
 	events  chan DBEvent
 	nats    *nats.Conn
 	subject string
+	Authz   func(ctx context.Context, user *auth.User, site string) error
 }
 
 type DBEvent struct {
@@ -112,6 +113,14 @@ func (r *Room) broadcast(msg []byte) {
 	}
 }
 
+func (h *Hub) wsOriginPatterns() []string {
+	patterns := []string{"*." + h.cfg.Domain, h.cfg.Domain}
+	if h.cfg.Domain == "localhost" {
+		patterns = append(patterns, "*.localhost", "localhost")
+	}
+	return patterns
+}
+
 func (h *Hub) ServeWS(w http.ResponseWriter, r *http.Request) {
 	u := auth.UserFromContext(r.Context())
 	site := h.cfg.SiteFromHost(r.Host)
@@ -119,7 +128,13 @@ func (h *Hub) ServeWS(w http.ResponseWriter, r *http.Request) {
 	if roomName == "" {
 		roomName = "default"
 	}
-	conn, err := websocket.Accept(w, r, &websocket.AcceptOptions{InsecureSkipVerify: true})
+	if h.Authz != nil {
+		if err := h.Authz(r.Context(), u, site); err != nil {
+			http.Error(w, "You do not have access to this site.", http.StatusForbidden)
+			return
+		}
+	}
+	conn, err := websocket.Accept(w, r, &websocket.AcceptOptions{OriginPatterns: h.wsOriginPatterns()})
 	if err != nil {
 		return
 	}

@@ -3,9 +3,12 @@ package ai
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"os"
@@ -41,6 +44,12 @@ type message struct {
 	Content string `json:"content"`
 }
 
+type quotaLimitError struct {
+	msg string
+}
+
+func (e quotaLimitError) Error() string { return e.msg }
+
 func (h *Handler) Chat(w http.ResponseWriter, r *http.Request) {
 	if h.cfg.AI.UpstreamURL == "" {
 		http.Error(w, `{"error":"AI is not configured. Set ai.upstream_url in artifact.yaml."}`, http.StatusServiceUnavailable)
@@ -49,11 +58,16 @@ func (h *Handler) Chat(w http.ResponseWriter, r *http.Request) {
 	u := auth.UserFromContext(r.Context())
 	site := h.cfg.SiteFromHost(r.Host)
 
-	if err := h.checkTokenQuota(r, u.Email); err != nil {
-		http.Error(w, fmt.Sprintf(`{"error":%q}`, err.Error()), http.StatusTooManyRequests)
+	if err := h.checkCallQuota(r, u.Email); err != nil {
+		if isQuotaLimit(err) {
+			http.Error(w, fmt.Sprintf(`{"error":%q}`, err.Error()), http.StatusTooManyRequests)
+		} else {
+			http.Error(w, `{"error":"quota check failed"}`, http.StatusInternalServerError)
+		}
 		return
 	}
 
+	r.Body = http.MaxBytesReader(w, r.Body, 4<<20) // 4 MiB JSON cap for long prompts
 	var req chatRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, `{"error":"Invalid JSON body."}`, http.StatusBadRequest)
@@ -110,7 +124,7 @@ func (h *Handler) Chat(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", resp.Header.Get("Content-Type"))
 		io.Copy(w, resp.Body)
 	}
-	_ = h.db.InsertAIUsage(r.Context(), &db.AIUsage{UserEmail: u.Email, Site: site, Tokens: 100, Timestamp: time.Now()})
+	h.recordUsage(r.Context(), u.Email, site)
 }
 
 func (h *Handler) Image(w http.ResponseWriter, r *http.Request) {
@@ -120,6 +134,17 @@ func (h *Handler) Image(w http.ResponseWriter, r *http.Request) {
 	}
 	u := auth.UserFromContext(r.Context())
 	site := h.cfg.SiteFromHost(r.Host)
+
+	if err := h.checkCallQuota(r, u.Email); err != nil {
+		if isQuotaLimit(err) {
+			http.Error(w, fmt.Sprintf(`{"error":%q}`, err.Error()), http.StatusTooManyRequests)
+		} else {
+			http.Error(w, `{"error":"quota check failed"}`, http.StatusInternalServerError)
+		}
+		return
+	}
+
+	r.Body = http.MaxBytesReader(w, r.Body, 1<<20) // 1 MiB JSON cap
 	var req struct {
 		Prompt string `json:"prompt"`
 	}
@@ -146,21 +171,37 @@ func (h *Handler) Image(w http.ResponseWriter, r *http.Request) {
 	defer resp.Body.Close()
 	w.Header().Set("Content-Type", "application/json")
 	io.Copy(w, resp.Body)
+	h.recordUsage(r.Context(), u.Email, site)
 }
 
-func (h *Handler) checkTokenQuota(r *http.Request, email string) error {
-	max := h.cfg.Governance.Quotas.AIDailyTokensPerUser
+func (h *Handler) checkCallQuota(r *http.Request, email string) error {
+	max := h.cfg.Governance.Quotas.AIDailyCallsPerUser
 	if max <= 0 {
 		return nil
 	}
+	cutoff := time.Now().Add(-24 * time.Hour)
 	var total int
-	_ = h.db.QueryRowContext(r.Context(),
-		`SELECT COALESCE(SUM(tokens),0) FROM ai_usage WHERE user_email=? AND timestamp > datetime('now', '-1 day')`,
-		email).Scan(&total)
+	err := h.db.QueryRowContext(r.Context(),
+		`SELECT COUNT(*) FROM ai_usage WHERE user_email=? AND timestamp > ?`,
+		email, cutoff).Scan(&total)
+	if err != nil {
+		return fmt.Errorf("quota check failed: %w", err)
+	}
 	if total >= max {
-		return fmt.Errorf("daily AI token limit (%d) reached. Try again tomorrow or ask an admin", max)
+		return quotaLimitError{msg: fmt.Sprintf("daily AI request limit (%d) reached. Try again tomorrow or ask an admin", max)}
 	}
 	return nil
+}
+
+func (h *Handler) recordUsage(ctx context.Context, email, site string) {
+	if err := h.db.InsertAIUsage(ctx, &db.AIUsage{UserEmail: email, Site: site, Timestamp: time.Now()}); err != nil {
+		slog.Default().Warn("ai usage insert failed", "err", err)
+	}
+}
+
+func isQuotaLimit(err error) bool {
+	var ql quotaLimitError
+	return errors.As(err, &ql)
 }
 
 func safeUpstreamURL(base, path string) (string, error) {

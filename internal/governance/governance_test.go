@@ -156,12 +156,25 @@ func TestCanReadSite(t *testing.T) {
 			wantErr:  false,
 		},
 		{
-			name: "governed admin cannot read private site today",
-			// plan 003 revisits this — admins bypass added there
+			name:     "governed admin can read private site",
 			mode:     "governed",
 			user:     &auth.User{Email: "b@co", Groups: []string{"admins"}},
 			existing: &db.SiteRecord{Owner: "a@co", Visibility: "private"},
+			wantErr:  false,
+		},
+		{
+			name:     "governed nil user private denied",
+			mode:     "governed",
+			user:     nil,
+			existing: &db.SiteRecord{Owner: "a@co", Visibility: "private"},
 			wantErr:  true,
+		},
+		{
+			name:     "governed nil user public allowed",
+			mode:     "governed",
+			user:     nil,
+			existing: &db.SiteRecord{Owner: "a@co", Visibility: "public"},
+			wantErr:  false,
 		},
 		{
 			name:     "governed non-owner private denied",
@@ -169,6 +182,51 @@ func TestCanReadSite(t *testing.T) {
 			user:     &auth.User{Email: "b@co"},
 			existing: &db.SiteRecord{Owner: "a@co", Visibility: "private"},
 			wantErr:  true,
+		},
+		{
+			name: "governed group site member allowed",
+			mode: "governed",
+			user: &auth.User{Email: "b@co", Groups: []string{"employees", "hr-team"}},
+			existing: &db.SiteRecord{
+				Owner: "a@co", Visibility: "group", VisibilityGroups: []string{"hr-team"},
+			},
+			wantErr: false,
+		},
+		{
+			name: "governed group site non-member denied",
+			mode: "governed",
+			user: &auth.User{Email: "b@co", Groups: []string{"employees"}},
+			existing: &db.SiteRecord{
+				Owner: "a@co", Visibility: "group", VisibilityGroups: []string{"hr-team"},
+			},
+			wantErr: true,
+		},
+		{
+			name: "governed group site owner allowed without group",
+			mode: "governed",
+			user: &auth.User{Email: "a@co", Groups: []string{"employees"}},
+			existing: &db.SiteRecord{
+				Owner: "a@co", Visibility: "group", VisibilityGroups: []string{"hr-team"},
+			},
+			wantErr: false,
+		},
+		{
+			name: "governed group site admin allowed without group",
+			mode: "governed",
+			user: &auth.User{Email: "b@co", Groups: []string{"admins"}},
+			existing: &db.SiteRecord{
+				Owner: "a@co", Visibility: "group", VisibilityGroups: []string{"hr-team"},
+			},
+			wantErr: false,
+		},
+		{
+			name: "governed group site empty groups denied",
+			mode: "governed",
+			user: &auth.User{Email: "b@co", Groups: []string{"employees"}},
+			existing: &db.SiteRecord{
+				Owner: "a@co", Visibility: "group", VisibilityGroups: []string{},
+			},
+			wantErr: true,
 		},
 	}
 	for _, tt := range tests {
