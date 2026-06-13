@@ -5,9 +5,10 @@ Execute in the order below unless dependencies say otherwise. Each executor:
 read the plan fully before starting, honor its STOP conditions, and update
 your row when done.
 
-Last reconciled: 2026-06-13 at `cd7b16c` (plan 011). Statuses below are
-verified against the code by probe, not by self-declaration — see plan 011 for
-the probe matrix.
+Last reconciled: 2026-06-13 at `31dffed` (plan 011, after relanding 003–007 via
+PR #14 + docs PR #13). Statuses below are verified against the code by probe,
+not by self-declaration — see plan 011 for the probe matrix. All of 001–011 are
+now DONE on `main`; full suite passes with `-race`.
 
 Selection note: the audit ran non-interactively, so plans were written for the
 top findings by leverage (impact ÷ effort, weighted by confidence) per the
@@ -24,8 +25,8 @@ under "Backlog" below.
 | 003  | Enforce governed-mode visibility on static/WS/KV/listing + WS origin check | P1 | M | 001 | DONE |
 | 004  | Group-scoped visibility (ADR 0003 pre-launch requirement) | P1 | M | 003 | DONE |
 | 005  | Reflect-origin CORS on static responses (ADR 0004 pre-launch gap) | P1 | S | — | DONE |
-| 006  | Harden warehouse SQL guards (UNION/multi-statement/LIMIT bypass) | P2 | M | 001 | TODO |
-| 007  | Quota portability (Postgres), usage indexes, JSON body caps | P2 | M | — (merge after 006) | TODO (probe failed: `datetime('now')` still in `internal/ai/ai.go` + `internal/warehouse/warehouse.go`; no usage-indexes migration) |
+| 006  | Harden warehouse SQL guards (UNION/multi-statement/LIMIT bypass) | P2 | M | 001 | DONE |
+| 007  | Quota portability (Postgres), usage indexes, JSON body caps | P2 | M | — (merge after 006) | DONE |
 | 008  | HTTP deploy API — `POST /api/v1/deploy` (multipart files or zip) | P1 | M | — | DONE |
 | 009  | Design system — Geist-inspired tokens + redesign of Artifact pages | P1 | M | — | DONE |
 | 010  | Drop-to-Deploy UI on the home page | P1 | M | 008, 009 | DONE |
@@ -38,7 +39,7 @@ Status values: TODO | IN PROGRESS | DONE | BLOCKED (with one-line reason) | REJE
 - 001 before 003/006: those plans flip characterization tests that 001 creates; changing governance/warehouse code without the pinned tests is how regressions slip in.
 - 003 before 004: group-scoped visibility only matters once `CanReadSite` is actually enforced on static serving, WebSockets, and KV.
 - 006 before 007 (ordering, not dependency): both edit `internal/warehouse/warehouse.go`; sequencing avoids conflicts.
-- 004 and 007 both add a DB migration; whichever lands second takes the next number. As of `cd7b16c` neither has landed, so the next free number is **`003_*.sql`**. Migrations on disk are exactly `001_initial.sql` and `002_sessions.sql` (contiguous) — the earlier note about an untracked `003_ai_usage_calls.sql` is stale: no such file exists and the working tree matches a fresh checkout.
+- Migrations on disk are now `001`→`005` contiguous: `001_initial`, `002_sessions`, `003_ai_usage_calls` (007's tokens→calls drop), `004_visibility_groups` (004), `005_usage_indexes` (007). The next free number is **`006_*.sql`**.
 - 008 before 010: the Drop UI consumes the deploy endpoint's exact multipart contract (`site`/`files`/`zip`/`confirm_overwrite`; 200/409/422 shapes).
 - 009 before 010: the Drop UI composes the `/ui.css` component classes and unhides the `#new-site` button that 009's home page ships hidden.
 - 008 and 009 are independent of each other and can run in parallel (008 touches `server.go` routes, 009 touches `server.go` for `/ui.css` — coordinate the merge).
