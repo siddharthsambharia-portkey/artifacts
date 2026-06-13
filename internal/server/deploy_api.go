@@ -278,11 +278,11 @@ func stageZipFile(fh *multipart.FileHeader, dest string, quotaBytes int64) (tota
 func sanitizeRelPath(name string) (string, error) {
 	normalized := strings.ReplaceAll(name, "\\", "/")
 	if strings.Contains(normalized, "..") || strings.HasPrefix(normalized, "/") {
-		return "", fmt.Errorf("Invalid file path %q in upload.", name)
+		return "", fmt.Errorf("invalid file path %q in upload", name)
 	}
 	rel := filepath.ToSlash(filepath.Clean(normalized))
 	if rel == "" || rel == "." || strings.HasPrefix(rel, "/") || strings.HasPrefix(rel, "..") || strings.Contains(rel, "../") {
-		return "", fmt.Errorf("Invalid file path %q in upload.", name)
+		return "", fmt.Errorf("invalid file path %q in upload", name)
 	}
 	return rel, nil
 }

@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/coder/websocket"
 	"github.com/siddharthsambharia-portkey/artifacts/internal/auth"
 	"github.com/siddharthsambharia-portkey/artifacts/internal/config"
 	"github.com/siddharthsambharia-portkey/artifacts/internal/db"
@@ -15,7 +16,6 @@ import (
 	"github.com/siddharthsambharia-portkey/artifacts/internal/server"
 	"github.com/siddharthsambharia-portkey/artifacts/internal/sites"
 	"github.com/siddharthsambharia-portkey/artifacts/internal/storage"
-	"github.com/coder/websocket"
 	"log/slog"
 	"os"
 )
@@ -63,7 +63,7 @@ func TestDBSubscribeEvent(t *testing.T) {
 	database := srv.DB()
 	doc := &db.Document{
 		ID: "test1", Site: "live-poll", Collection: "votes",
-		Data: json.RawMessage(`{"option":"Tacos"}`),
+		Data:      json.RawMessage(`{"option":"Tacos"}`),
 		CreatedBy: auth.DevUser.Email, UpdatedBy: auth.DevUser.Email,
 		CreatedAt: time.Now(), UpdatedAt: time.Now(),
 	}

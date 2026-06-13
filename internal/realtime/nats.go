@@ -4,8 +4,8 @@ import (
 	"log/slog"
 	"os"
 
-	"github.com/siddharthsambharia-portkey/artifacts/internal/config"
 	"github.com/nats-io/nats.go"
+	"github.com/siddharthsambharia-portkey/artifacts/internal/config"
 )
 
 // ConnectNATS connects to NATS if ARTIFACT_NATS_URL or NATS_URL is set.

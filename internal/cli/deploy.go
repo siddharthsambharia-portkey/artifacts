@@ -6,10 +6,10 @@ import (
 
 	"github.com/siddharthsambharia-portkey/artifacts/internal/auth"
 	"github.com/siddharthsambharia-portkey/artifacts/internal/config"
+	"github.com/siddharthsambharia-portkey/artifacts/internal/db"
 	"github.com/siddharthsambharia-portkey/artifacts/internal/governance"
 	"github.com/siddharthsambharia-portkey/artifacts/internal/sites"
 	"github.com/siddharthsambharia-portkey/artifacts/internal/storage"
-	"github.com/siddharthsambharia-portkey/artifacts/internal/db"
 	"github.com/spf13/cobra"
 )
 

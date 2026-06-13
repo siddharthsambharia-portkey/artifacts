@@ -7,18 +7,18 @@ import (
 	"sync"
 	"time"
 
-	"github.com/siddharthsambharia-portkey/artifacts/internal/auth"
-	"github.com/siddharthsambharia-portkey/artifacts/internal/config"
 	"github.com/coder/websocket"
 	"github.com/nats-io/nats.go"
+	"github.com/siddharthsambharia-portkey/artifacts/internal/auth"
+	"github.com/siddharthsambharia-portkey/artifacts/internal/config"
 )
 
 type Hub struct {
-	cfg    *config.Config
-	rooms  map[string]*Room
-	mu     sync.RWMutex
-	events chan DBEvent
-	nats   *nats.Conn
+	cfg     *config.Config
+	rooms   map[string]*Room
+	mu      sync.RWMutex
+	events  chan DBEvent
+	nats    *nats.Conn
 	subject string
 }
 
@@ -47,9 +47,9 @@ type Client struct {
 
 func NewHub(cfg *config.Config) *Hub {
 	h := &Hub{
-		cfg:    cfg,
-		rooms:  make(map[string]*Room),
-		events: make(chan DBEvent, 256),
+		cfg:     cfg,
+		rooms:   make(map[string]*Room),
+		events:  make(chan DBEvent, 256),
 		subject: "artifact.db." + cfg.Domain,
 	}
 	go h.broadcastDBEvents()

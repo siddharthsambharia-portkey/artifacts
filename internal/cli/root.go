@@ -2,7 +2,6 @@ package cli
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/spf13/cobra"
 )
@@ -43,9 +42,4 @@ func versionCmd() *cobra.Command {
 			fmt.Printf("artifact %s\n", ver)
 		},
 	}
-}
-
-func exitErr(msg string) {
-	fmt.Fprintf(os.Stderr, "error: %s\n", msg)
-	os.Exit(1)
 }
