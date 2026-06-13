@@ -4,8 +4,6 @@
 
 Inspired by [Shopify's Quick](https://shopify.engineering/quick); built so every company can run their own trust bubble on Okta + their own cloud.
 
-![demo](demo/demo.gif)
-
 ## 60-second quickstart
 
 ```bash
@@ -23,12 +21,17 @@ artifact deploy
 open http://my-poll.localhost:8443
 ```
 
+Or skip the CLI: open `http://localhost:8443` and drag a folder onto the page.
+
 ## Features
 
 | Capability | API |
 |---|---|
 | Static hosting | `artifact deploy` → `mysite.artifact.corp.com` |
+| Drop to deploy | drag a file, folder, or zip onto the home page |
+| Deploy API | `POST /api/v1/deploy` (multipart `files` or `zip`) |
 | Database + realtime | `artifact.db.collection('x').create/subscribe` |
+| Key-value | `artifact.kv.set(k, v)` / `artifact.kv.get(k)` |
 | File uploads | `artifact.files.upload(file)` |
 | AI chat + images | `artifact.ai.chat()` / `artifact.ai.image()` |
 | Warehouse SQL | `artifact.warehouse.query('SELECT …')` |
@@ -71,10 +74,12 @@ One Go binary. Wildcard DNS `*.artifact.corp.com` → Artifact. A **2 vCPU / 4 G
 |---|---|
 | Docker Compose (dev/demo) | `deploy/docker-compose.yml` |
 | Kubernetes + Helm | `deploy/helm/artifact/` |
-| GCP (GCS + Cloud SQL + ILB) | `deploy/terraform/gcp/` |
-| AWS (S3 + RDS + ALB) | `deploy/terraform/aws/` |
+| GCP starter (GCS + Cloud SQL) | `deploy/terraform/gcp/main.tf` |
+| AWS starter (S3 + RDS) | `deploy/terraform/aws/main.tf` |
 | Okta OIDC | `docs/auth-okta.md` |
-| Header-trust (IAP, Pomerium) | `deploy/recipes/` |
+| Header-trust (Pomerium) | `deploy/recipes/pomerium.md` |
+
+Terraform examples are starting points — add load balancers, networking, and your identity proxy per your org.
 
 ## Development
 
@@ -84,6 +89,8 @@ make build    # compile binary
 make test     # unit tests
 make sdk      # build artifact.js
 ```
+
+Copy `.env.example` to `.env` for the environment variables Artifact reads (OIDC/AI/warehouse/Slack secrets and config overrides). All values there are placeholders.
 
 ## Examples
 

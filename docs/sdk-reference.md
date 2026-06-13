@@ -1,5 +1,9 @@
 # SDK Reference
 
+> Quick reference table. For full examples, constraints, and CLI/MCP usage, see
+> [`skills/SKILL.md`](../skills/SKILL.md) (dropped into every project by
+> `artifact init`) — that file is canonical.
+
 Load the SDK in any Artifact-hosted page:
 
 ```html

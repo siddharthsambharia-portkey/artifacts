@@ -23,6 +23,8 @@ artifact deploy
 open http://my-app.localhost:8443
 ```
 
+Prefer the browser? Open `http://localhost:8443` and drag a folder, file, or zip onto the home page to deploy without the CLI.
+
 ## Production
 
 Copy `artifact.yaml`, set `auth.mode: oidc`, configure storage and database, then:

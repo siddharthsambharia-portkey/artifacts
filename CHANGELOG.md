@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- Drop-to-deploy: drag a folder, file, or zip onto the home page to publish a site, no CLI required
+- HTTP deploy API (`POST /api/v1/deploy`) accepting multipart `files` or a `zip` part, with overwrite confirmation and per-site size quotas
+- Design system with shared tokens served at `/ui.css`; redesigned home, admin console, and error pages
+- Characterization test suite pinning security-critical behavior (governance, sessions, warehouse query guards, rate limiting)
+
+### Fixed
+
+- Expired sessions now return an error instead of a nil authenticated user
+
 ## [0.1.0] - 2026-06-11
 
 ### Added

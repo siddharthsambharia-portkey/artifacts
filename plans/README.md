@@ -5,6 +5,10 @@ Execute in the order below unless dependencies say otherwise. Each executor:
 read the plan fully before starting, honor its STOP conditions, and update
 your row when done.
 
+Last reconciled: 2026-06-13 at `cd7b16c` (plan 011). Statuses below are
+verified against the code by probe, not by self-declaration — see plan 011 for
+the probe matrix.
+
 Selection note: the audit ran non-interactively, so plans were written for the
 top findings by leverage (impact ÷ effort, weighted by confidence) per the
 skill's default. The full findings table, including items not planned, was
@@ -21,10 +25,11 @@ under "Backlog" below.
 | 004  | Group-scoped visibility (ADR 0003 pre-launch requirement) | P1 | M | 003 | DONE |
 | 005  | Reflect-origin CORS on static responses (ADR 0004 pre-launch gap) | P1 | S | — | DONE |
 | 006  | Harden warehouse SQL guards (UNION/multi-statement/LIMIT bypass) | P2 | M | 001 | TODO |
-| 007  | Quota portability (Postgres), usage indexes, JSON body caps | P2 | M | — (merge after 006) | DONE |
+| 007  | Quota portability (Postgres), usage indexes, JSON body caps | P2 | M | — (merge after 006) | TODO (probe failed: `datetime('now')` still in `internal/ai/ai.go` + `internal/warehouse/warehouse.go`; no usage-indexes migration) |
 | 008  | HTTP deploy API — `POST /api/v1/deploy` (multipart files or zip) | P1 | M | — | DONE |
 | 009  | Design system — Geist-inspired tokens + redesign of Artifact pages | P1 | M | — | DONE |
 | 010  | Drop-to-Deploy UI on the home page | P1 | M | 008, 009 | DONE |
+| 011  | Reconcile the plans index and bring docs in line with shipped code | P1 | M | — (re-runnable) | DONE |
 
 Status values: TODO | IN PROGRESS | DONE | BLOCKED (with one-line reason) | REJECTED (with one-line rationale)
 
@@ -33,21 +38,20 @@ Status values: TODO | IN PROGRESS | DONE | BLOCKED (with one-line reason) | REJE
 - 001 before 003/006: those plans flip characterization tests that 001 creates; changing governance/warehouse code without the pinned tests is how regressions slip in.
 - 003 before 004: group-scoped visibility only matters once `CanReadSite` is actually enforced on static serving, WebSockets, and KV.
 - 006 before 007 (ordering, not dependency): both edit `internal/warehouse/warehouse.go`; sequencing avoids conflicts.
-- 004 and 007 both add a DB migration; whichever lands second takes the next number (004 expects `004_visibility_groups.sql`, 007 expects `005_usage_indexes.sql` — renumber if landed out of order). Plan 007 uses **`005_usage_indexes.sql`** (004 visibility migration was present at execution time).
-- **Before any of this**: commit the untracked `internal/db/migrations/003_ai_usage_calls.sql` — fresh checkouts currently get a different schema than the working tree (one-line fix, no plan needed).
+- 004 and 007 both add a DB migration; whichever lands second takes the next number. As of `cd7b16c` neither has landed, so the next free number is **`003_*.sql`**. Migrations on disk are exactly `001_initial.sql` and `002_sessions.sql` (contiguous) — the earlier note about an untracked `003_ai_usage_calls.sql` is stale: no such file exists and the working tree matches a fresh checkout.
 - 008 before 010: the Drop UI consumes the deploy endpoint's exact multipart contract (`site`/`files`/`zip`/`confirm_overwrite`; 200/409/422 shapes).
 - 009 before 010: the Drop UI composes the `/ui.css` component classes and unhides the `#new-site` button that 009's home page ships hidden.
 - 008 and 009 are independent of each other and can run in parallel (008 touches `server.go` routes, 009 touches `server.go` for `/ui.css` — coordinate the merge).
 
 ## Backlog (audited, real, not yet planned)
 
-- **CLI deploy bypasses the server entirely** (`internal/cli/deploy.go:30-57` opens storage+DB directly and deploys as the hardcoded `auth.DevUser`): remote Builders can't deploy without bucket credentials, and governed-mode ownership is meaningless via CLI (every site is owned by `dev@localhost`). The endpoint half is now **plan 008**; remaining: CLI client mode (how does the CLI authenticate? device flow / token) and MCP parity, both still unplanned (L effort, auth design needed).
+- **CLI deploy bypasses the server entirely** (`internal/cli/deploy.go:30-57` opens storage+DB directly and deploys as the hardcoded `auth.DevUser`): remote Builders can't deploy without bucket credentials, and governed-mode ownership is meaningless via CLI (every site is owned by `dev@localhost`). The server endpoint half **landed in plan 008** (`POST /api/v1/deploy`, verified at `cd7b16c`); remaining and still unplanned: pointing the CLI/MCP at that endpoint as authenticated clients (how does the CLI authenticate? device flow / token) (L effort, auth design needed).
 - **Header-trust mode hardcodes `Groups: ["employees"]`** (`internal/auth/header_trust.go:38`): no admins and no group-scoped visibility possible in the enterprise auth mode. Needs a configurable groups header. S/M.
 - **CSRF hardening for governed mode**: `SameSite=Lax` blocks external sites, but sibling subdomains are same-site; a malicious deployed site can fire simple-content-type POSTs as the visiting owner. M effort (token via `/api/v1/me`, SDK attaches header).
 - **Realtime hub hygiene**: empty rooms never removed from `hub.rooms`, `events` channel never closed, write errors ignored in `writePump`, rate-limiter bucket map never pruned. S each, bundle as one cleanup PR.
 - **Static serving perf**: LocalStore computes an MD5 of the whole file on every `Get` (`internal/storage/local.go:69-71`) and the `If-None-Match` check runs *after* fetching the object (`internal/sites/serve.go:65`). S/M.
 - **CI/supply chain**: add `govulncheck` job, dependabot config (gomod + sdk npm), fix `release.yml` pinning Go 1.23 while go.mod requires 1.25.8, add `-coverprofile` + upload. All S.
-- **DX/docs**: repo-level CLAUDE.md for contributors (CONTEXT.md names Coding Agents as the primary persona; there's no guide for agents working on Artifact itself); `docs/faq.md` is missing the concrete "not a fit" examples ADR 0002 requires; README omits `artifact.kv` from the features table; `.env.example`; config reference for `artifact.yaml`. All S/M.
+- **DX/docs**: a config reference for every `artifact.yaml` field (M-effort writing task, still unplanned). The rest of this bullet — repo-level CLAUDE.md, the `docs/faq.md` "not a fit" examples, the `artifact.kv` README row, and `.env.example` — was resolved by **plan 011** at `cd7b16c`.
 - **Repo hygiene**: stale `.atrium-data/` dir and `bin/atrium` binary (pre-rename leftovers, untracked — delete); `artifact-master-build-spec.md` tracked with mode 600 while its siblings are gitignored (decide and align); `lessons/`/`learning-records/`/`reference/` untracked and not gitignored.
 - **Direction (from the audit, grounded in the build spec)**: CLI `delete`/`rollback` (manifest-pointer architecture already supports rollback); collaborators + ownership transfer for governed mode (spec promises "departed-employee site transfer"); MCP tools for site inspection/cleanup (`get_site_info`, `delete_site`, `read_deployed_file`); `artifact.files.delete(id)` for upload/delete symmetry.
 
