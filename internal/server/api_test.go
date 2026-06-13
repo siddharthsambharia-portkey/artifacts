@@ -162,7 +162,7 @@ func TestKVGroupScopedVisibility(t *testing.T) {
 	if err := database.UpsertSite(context.Background(), &db.SiteRecord{
 		Name: "hr-site", Owner: "alice@co", Visibility: "group",
 		VisibilityGroups: []string{"hr-team"},
-		DeployID: "d1", DeployedBy: "alice@co", DeployedAt: time.Now(),
+		DeployID:         "d1", DeployedBy: "alice@co", DeployedAt: time.Now(),
 	}); err != nil {
 		t.Fatal(err)
 	}

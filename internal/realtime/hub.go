@@ -20,7 +20,7 @@ type Hub struct {
 	events  chan DBEvent
 	nats    *nats.Conn
 	subject string
-	Authz  func(ctx context.Context, user *auth.User, site string) error
+	Authz   func(ctx context.Context, user *auth.User, site string) error
 }
 
 type DBEvent struct {
