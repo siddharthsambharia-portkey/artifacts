@@ -126,10 +126,7 @@ func (h *Handler) checkDailyQuota(r *http.Request, email string) error {
 		return nil
 	}
 	cutoff := time.Now().Add(-24 * time.Hour)
-	var count int
-	err := h.db.QueryRowContext(r.Context(),
-		`SELECT COUNT(*) FROM audit_log WHERE user_email=? AND action='warehouse_query' AND timestamp > ?`,
-		email, cutoff).Scan(&count)
+	count, err := h.db.CountWarehouseQueriesSince(r.Context(), cutoff)
 	if err != nil {
 		return fmt.Errorf("quota check failed: %w", err)
 	}
