@@ -16,17 +16,25 @@ import (
 	"time"
 
 	"github.com/siddharthsambharia-portkey/artifacts/internal/auth"
-	"github.com/siddharthsambharia-portkey/artifacts/internal/config"
 	"github.com/siddharthsambharia-portkey/artifacts/internal/db"
 )
 
+type AIConfig interface {
+	SiteFromHost(host string) string
+	AIUpstreamURL() string
+	AIModelsAllowlist() []string
+	AIImageModel() string
+	AIAPIKeyEnv() string
+	AIDailyCallsPerUser() int
+}
+
 type Handler struct {
-	cfg    *config.Config
+	cfg    AIConfig
 	db     *db.DB
 	client *http.Client
 }
 
-func NewHandler(cfg *config.Config, database *db.DB) *Handler {
+func NewHandler(cfg AIConfig, database *db.DB) *Handler {
 	return &Handler{
 		cfg: cfg, db: database,
 		client: &http.Client{Timeout: 120 * time.Second},
@@ -51,7 +59,7 @@ type quotaLimitError struct {
 func (e quotaLimitError) Error() string { return e.msg }
 
 func (h *Handler) Chat(w http.ResponseWriter, r *http.Request) {
-	if h.cfg.AI.UpstreamURL == "" {
+	if h.cfg.AIUpstreamURL() == "" {
 		http.Error(w, `{"error":"AI is not configured. Set ai.upstream_url in artifact.yaml."}`, http.StatusServiceUnavailable)
 		return
 	}
@@ -73,9 +81,9 @@ func (h *Handler) Chat(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, `{"error":"Invalid JSON body."}`, http.StatusBadRequest)
 		return
 	}
-	if len(h.cfg.AI.ModelsAllowlist) > 0 && req.Model != "" {
+	if len(h.cfg.AIModelsAllowlist()) > 0 && req.Model != "" {
 		allowed := false
-		for _, m := range h.cfg.AI.ModelsAllowlist {
+		for _, m := range h.cfg.AIModelsAllowlist() {
 			if m == req.Model {
 				allowed = true
 				break
@@ -87,7 +95,7 @@ func (h *Handler) Chat(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	upstreamURL, err := safeUpstreamURL(h.cfg.AI.UpstreamURL, "/chat/completions")
+	upstreamURL, err := safeUpstreamURL(h.cfg.AIUpstreamURL(), "/chat/completions")
 	if err != nil {
 		http.Error(w, `{"error":"Invalid ai.upstream_url in config."}`, http.StatusInternalServerError)
 		return
@@ -99,7 +107,7 @@ func (h *Handler) Chat(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	upstream.Header.Set("Content-Type", "application/json")
-	upstream.Header.Set("Authorization", "Bearer "+os.Getenv(h.cfg.AI.APIKeyEnv))
+	upstream.Header.Set("Authorization", "Bearer "+os.Getenv(h.cfg.AIAPIKeyEnv()))
 	upstream.Header.Set("x-artifact-user", u.Email)
 	upstream.Header.Set("x-artifact-site", site)
 	resp, err := h.client.Do(upstream)
@@ -128,7 +136,7 @@ func (h *Handler) Chat(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) Image(w http.ResponseWriter, r *http.Request) {
-	if h.cfg.AI.ImageModel == "" {
+	if h.cfg.AIImageModel() == "" {
 		http.Error(w, `{"error":"Image generation is not configured. Set ai.image_model in artifact.yaml."}`, http.StatusServiceUnavailable)
 		return
 	}
@@ -152,15 +160,15 @@ func (h *Handler) Image(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, `{"error":"Invalid JSON body."}`, http.StatusBadRequest)
 		return
 	}
-	upstreamURL, err := safeUpstreamURL(h.cfg.AI.UpstreamURL, "/images/generations")
+	upstreamURL, err := safeUpstreamURL(h.cfg.AIUpstreamURL(), "/images/generations")
 	if err != nil {
 		http.Error(w, `{"error":"Invalid ai.upstream_url in config."}`, http.StatusInternalServerError)
 		return
 	}
-	body, _ := json.Marshal(map[string]any{"model": h.cfg.AI.ImageModel, "prompt": req.Prompt, "n": 1})
+	body, _ := json.Marshal(map[string]any{"model": h.cfg.AIImageModel(), "prompt": req.Prompt, "n": 1})
 	upstream, _ := http.NewRequestWithContext(r.Context(), "POST", upstreamURL, bytes.NewReader(body))
 	upstream.Header.Set("Content-Type", "application/json")
-	upstream.Header.Set("Authorization", "Bearer "+os.Getenv(h.cfg.AI.APIKeyEnv))
+	upstream.Header.Set("Authorization", "Bearer "+os.Getenv(h.cfg.AIAPIKeyEnv()))
 	upstream.Header.Set("x-artifact-user", u.Email)
 	upstream.Header.Set("x-artifact-site", site)
 	resp, err := h.client.Do(upstream)
@@ -175,15 +183,12 @@ func (h *Handler) Image(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) checkCallQuota(r *http.Request, email string) error {
-	max := h.cfg.Governance.Quotas.AIDailyCallsPerUser
+	max := h.cfg.AIDailyCallsPerUser()
 	if max <= 0 {
 		return nil
 	}
 	cutoff := time.Now().Add(-24 * time.Hour)
-	var total int
-	err := h.db.QueryRowContext(r.Context(),
-		`SELECT COUNT(*) FROM ai_usage WHERE user_email=? AND timestamp > ?`,
-		email, cutoff).Scan(&total)
+	total, err := h.db.CountAIUsageSince(r.Context(), email, cutoff)
 	if err != nil {
 		return fmt.Errorf("quota check failed: %w", err)
 	}

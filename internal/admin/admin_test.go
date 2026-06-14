@@ -13,6 +13,7 @@ import (
 	"github.com/siddharthsambharia-portkey/artifacts/internal/auth"
 	"github.com/siddharthsambharia-portkey/artifacts/internal/config"
 	"github.com/siddharthsambharia-portkey/artifacts/internal/db"
+	"github.com/siddharthsambharia-portkey/artifacts/internal/governance"
 )
 
 func setupAdminTestDB(t *testing.T) (*db.DB, *config.Config) {
@@ -37,7 +38,7 @@ func withSiteParam(req *http.Request, site string) *http.Request {
 
 func TestSetVisibility(t *testing.T) {
 	database, cfg := setupAdminTestDB(t)
-	handler := NewHandler(cfg, database)
+	handler := NewHandler(cfg, database, governance.New(cfg))
 	now := time.Now()
 	if err := database.UpsertSite(context.Background(), &db.SiteRecord{
 		Name: "demo", Owner: "alice@co", Visibility: "private",

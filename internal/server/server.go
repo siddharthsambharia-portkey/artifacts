@@ -118,8 +118,8 @@ func (s *Server) routes() http.Handler {
 	fileHandler := files.NewHandler(s.cfg, s.store, s.db)
 	aiHandler := ai.NewHandler(s.cfg, s.db)
 	whHandler, _ := warehouse.NewHandler(s.cfg, s.db)
-	notifyHandler := notify.NewHandler(s.cfg, s.db)
-	adminHandler := admin.NewHandler(s.cfg, s.db)
+	notifyHandler := notify.NewHandler(s.cfg, s.db, notify.NewHTTPPoster())
+	adminHandler := admin.NewHandler(s.cfg, s.db, gov)
 
 	limiter := ratelimit.New(20, 50)
 	aiLimiter := ratelimit.New(5, 10)

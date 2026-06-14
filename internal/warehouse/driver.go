@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/siddharthsambharia-portkey/artifacts/internal/config"
 )
 
 // Querier executes read-only SQL.
@@ -14,14 +13,14 @@ type Querier interface {
 	Close() error
 }
 
-func NewQuerier(cfg *config.Config) (Querier, error) {
-	switch cfg.Warehouse.Driver {
+func NewQuerier(cfg WarehouseConfig) (Querier, error) {
+	switch cfg.WarehouseDriver() {
 	case "none", "":
 		return nil, nil
 	case "postgres":
-		creds := os.Getenv(cfg.Warehouse.CredentialsEnv)
+		creds := os.Getenv(cfg.WarehouseCredentialsEnv())
 		if creds == "" {
-			return nil, fmt.Errorf("warehouse credentials not set — configure %s", cfg.Warehouse.CredentialsEnv)
+			return nil, fmt.Errorf("warehouse credentials not set — configure %s", cfg.WarehouseCredentialsEnv())
 		}
 		return newPostgresQuerier(creds)
 	case "bigquery":
@@ -29,6 +28,6 @@ func NewQuerier(cfg *config.Config) (Querier, error) {
 	case "snowflake":
 		return newSnowflakeQuerier(cfg)
 	default:
-		return nil, fmt.Errorf("unknown warehouse driver %q", cfg.Warehouse.Driver)
+		return nil, fmt.Errorf("unknown warehouse driver %q", cfg.WarehouseDriver())
 	}
 }

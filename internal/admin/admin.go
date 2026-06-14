@@ -16,10 +16,11 @@ import (
 type Handler struct {
 	cfg *config.Config
 	db  *db.DB
+	gov *governance.Governor
 }
 
-func NewHandler(cfg *config.Config, database *db.DB) *Handler {
-	return &Handler{cfg: cfg, db: database}
+func NewHandler(cfg *config.Config, database *db.DB, gov *governance.Governor) *Handler {
+	return &Handler{cfg: cfg, db: database, gov: gov}
 }
 
 func (h *Handler) Audit(w http.ResponseWriter, r *http.Request) {
@@ -49,29 +50,16 @@ func (h *Handler) Usage(w http.ResponseWriter, r *http.Request) {
 	if !h.requireAdmin(w, r) {
 		return
 	}
-	rows, err := h.db.QueryContext(r.Context(),
-		`SELECT user_email, site, COUNT(*) as requests
-		 FROM ai_usage GROUP BY user_email, site ORDER BY requests DESC LIMIT 100`)
-	type usageRow struct {
-		UserEmail string `json:"user_email"`
-		Site      string `json:"site"`
-		Requests  int    `json:"requests"`
-	}
-	var out []usageRow
-	if err == nil {
-		defer rows.Close()
-		for rows.Next() {
-			var u usageRow
-			rows.Scan(&u.UserEmail, &u.Site, &u.Requests)
-			out = append(out, u)
-		}
+	out, err := h.db.ListAIUsageSummary(r.Context(), 100)
+	if err != nil {
+		writeError(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 	if out == nil {
-		out = []usageRow{}
+		out = []db.UsageSummary{}
 	}
 	writeJSON(w, out)
 }
-
 func (h *Handler) Config(w http.ResponseWriter, r *http.Request) {
 	if !h.requireAdmin(w, r) {
 		return
@@ -145,7 +133,7 @@ func (h *Handler) Stats(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) requireAdmin(w http.ResponseWriter, r *http.Request) bool {
 	u := auth.UserFromContext(r.Context())
-	if u == nil || !governance.New(h.cfg).IsAdmin(u) {
+	if u == nil || !h.gov.IsAdmin(u) {
 		writeError(w, "Admin access required. Your account must be in the admins group.", http.StatusForbidden)
 		return false
 	}

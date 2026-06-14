@@ -12,21 +12,29 @@ import (
 	"time"
 
 	"github.com/siddharthsambharia-portkey/artifacts/internal/auth"
-	"github.com/siddharthsambharia-portkey/artifacts/internal/config"
 	"github.com/siddharthsambharia-portkey/artifacts/internal/db"
 )
+
+type WarehouseConfig interface {
+	SiteFromHost(host string) string
+	WarehouseDriver() string
+	WarehouseCredentialsEnv() string
+	WarehouseAllowedDatasets() []string
+	WarehouseRowLimit() int
+	WarehouseDailyQueriesPerUser() int
+}
 
 var selectOnly = regexp.MustCompile(`(?i)^\s*SELECT\b`)
 var denyPatterns = regexp.MustCompile(`(?i)\b(INSERT|UPDATE|DELETE|DROP|ALTER|CREATE|TRUNCATE|GRANT|REVOKE|EXEC|EXECUTE|UNION|INTO|MERGE|CALL)\b`)
 var denyTokens = regexp.MustCompile(`;|--|/\*`)
 
 type Handler struct {
-	cfg     *config.Config
+	cfg     WarehouseConfig
 	db      *db.DB
 	querier Querier
 }
 
-func NewHandler(cfg *config.Config, database *db.DB) (*Handler, error) {
+func NewHandler(cfg WarehouseConfig, database *db.DB) (*Handler, error) {
 	q, err := NewQuerier(cfg)
 	if err != nil {
 		return nil, err
@@ -75,7 +83,7 @@ func (h *Handler) Query(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, `{"error":"Query references a dataset not in warehouse.allowed_datasets. Ask an admin to add it."}`, http.StatusForbidden)
 		return
 	}
-	limit := h.cfg.Warehouse.RowLimit
+	limit := h.cfg.WarehouseRowLimit()
 	if limit <= 0 {
 		limit = 10000
 	}
@@ -102,11 +110,11 @@ func (h *Handler) Query(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) datasetAllowed(sql string) bool {
-	if len(h.cfg.Warehouse.AllowedDatasets) == 0 {
+	if len(h.cfg.WarehouseAllowedDatasets()) == 0 {
 		return false
 	}
 	lower := strings.ToLower(sql)
-	for _, ds := range h.cfg.Warehouse.AllowedDatasets {
+	for _, ds := range h.cfg.WarehouseAllowedDatasets() {
 		if strings.Contains(lower, strings.ToLower(ds)) {
 			return true
 		}
@@ -121,15 +129,12 @@ type quotaLimitError struct {
 func (e quotaLimitError) Error() string { return e.msg }
 
 func (h *Handler) checkDailyQuota(r *http.Request, email string) error {
-	max := h.cfg.Governance.Quotas.WarehouseDailyQueriesPerUser
+	max := h.cfg.WarehouseDailyQueriesPerUser()
 	if max <= 0 {
 		return nil
 	}
 	cutoff := time.Now().Add(-24 * time.Hour)
-	var count int
-	err := h.db.QueryRowContext(r.Context(),
-		`SELECT COUNT(*) FROM audit_log WHERE user_email=? AND action='warehouse_query' AND timestamp > ?`,
-		email, cutoff).Scan(&count)
+	count, err := h.db.CountWarehouseQueriesSince(r.Context(), cutoff)
 	if err != nil {
 		return fmt.Errorf("quota check failed: %w", err)
 	}
