@@ -59,6 +59,17 @@ type AIUsage struct {
 	Timestamp time.Time `json:"timestamp"`
 }
 
+type FileRecord struct {
+	ID          string
+	Site        string
+	Filename    string
+	ContentType string
+	SizeBytes   int64
+	StoragePath string
+	UploadedBy  string
+	UploadedAt  time.Time
+}
+
 func Open(cfg *config.Config) (*DB, error) {
 	switch cfg.Database.Driver {
 	case "sqlite":
@@ -89,27 +100,26 @@ func (d *DB) Migrate(ctx context.Context) error {
 
 func (d *DB) CreateDocument(ctx context.Context, doc *Document) error {
 	_, err := d.ExecContext(ctx,
-		`INSERT INTO documents (id, site, collection, data, created_by, updated_by, created_at, updated_at)
-		 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+		"INSERT INTO documents (id, site, collection, data, created_by, updated_by, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
 		doc.ID, doc.Site, doc.Collection, doc.Data, doc.CreatedBy, doc.UpdatedBy, doc.CreatedAt, doc.UpdatedAt)
 	return shimExec(err, d.driver)
 }
 
 func (d *DB) UpdateDocument(ctx context.Context, doc *Document) error {
 	_, err := d.ExecContext(ctx,
-		`UPDATE documents SET data=?, updated_by=?, updated_at=? WHERE id=? AND site=?`,
+		"UPDATE documents SET data=?, updated_by=?, updated_at=? WHERE id=? AND site=?",
 		doc.Data, doc.UpdatedBy, doc.UpdatedAt, doc.ID, doc.Site)
 	return shimExec(err, d.driver)
 }
 
 func (d *DB) DeleteDocument(ctx context.Context, site, id string) error {
-	_, err := d.ExecContext(ctx, `DELETE FROM documents WHERE id=? AND site=?`, id, site)
+	_, err := d.ExecContext(ctx, "DELETE FROM documents WHERE id=? AND site=?", id, site)
 	return shimExec(err, d.driver)
 }
 
 func (d *DB) GetDocument(ctx context.Context, site, id string) (*Document, error) {
 	row := d.QueryRowContext(ctx,
-		`SELECT id, site, collection, data, created_by, updated_by, created_at, updated_at FROM documents WHERE id=? AND site=?`,
+		"SELECT id, site, collection, data, created_by, updated_by, created_at, updated_at FROM documents WHERE id=? AND site=?",
 		id, site)
 	return scanDocument(row)
 }
@@ -119,8 +129,7 @@ func (d *DB) ListDocuments(ctx context.Context, site, collection string, limit i
 	if orderDesc {
 		order = "created_at DESC"
 	}
-	q := fmt.Sprintf(`SELECT id, site, collection, data, created_by, updated_by, created_at, updated_at
-		FROM documents WHERE site=? AND collection=? ORDER BY %s LIMIT ?`, order)
+	q := fmt.Sprintf("SELECT id, site, collection, data, created_by, updated_by, created_at, updated_at FROM documents WHERE site=? AND collection=? ORDER BY %s LIMIT ?", order)
 	rows, err := d.QueryContext(ctx, q, site, collection, limit)
 	if err != nil {
 		return nil, shimQuery(err, d.driver)
@@ -139,30 +148,27 @@ func (d *DB) ListDocuments(ctx context.Context, site, collection string, limit i
 
 func (d *DB) CountDocuments(ctx context.Context, site string) (int, error) {
 	var n int
-	err := d.QueryRowContext(ctx, `SELECT COUNT(*) FROM documents WHERE site=?`, site).Scan(&n)
+	err := d.QueryRowContext(ctx, "SELECT COUNT(*) FROM documents WHERE site=?", site).Scan(&n)
 	return n, shimQuery(err, d.driver)
 }
 
 func (d *DB) SetKV(ctx context.Context, site, key, value string) error {
 	_, err := d.ExecContext(ctx,
-		`INSERT INTO kv (site, key, value) VALUES (?, ?, ?) ON CONFLICT(site, key) DO UPDATE SET value=excluded.value`,
+		"INSERT INTO kv (site, key, value) VALUES (?, ?, ?) ON CONFLICT(site, key) DO UPDATE SET value=excluded.value",
 		site, key, value)
 	return shimExec(err, d.driver)
 }
 
 func (d *DB) GetKV(ctx context.Context, site, key string) (string, error) {
 	var v string
-	err := d.QueryRowContext(ctx, `SELECT value FROM kv WHERE site=? AND key=?`, site, key).Scan(&v)
+	err := d.QueryRowContext(ctx, "SELECT value FROM kv WHERE site=? AND key=?", site, key).Scan(&v)
 	return v, shimQuery(err, d.driver)
 }
 
 func (d *DB) UpsertSite(ctx context.Context, s *SiteRecord) error {
 	groupsJSON := marshalVisibilityGroups(s.VisibilityGroups)
 	_, err := d.ExecContext(ctx,
-		`INSERT INTO sites (name, owner, deploy_id, deployed_by, deployed_at, size_bytes, visibility, visibility_groups)
-		 VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-		 ON CONFLICT(name) DO UPDATE SET deploy_id=excluded.deploy_id, deployed_by=excluded.deployed_by,
-		 deployed_at=excluded.deployed_at, size_bytes=excluded.size_bytes`,
+		"INSERT INTO sites (name, owner, deploy_id, deployed_by, deployed_at, size_bytes, visibility, visibility_groups) VALUES (?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(name) DO UPDATE SET deploy_id=excluded.deploy_id, deployed_by=excluded.deployed_by, deployed_at=excluded.deployed_at, size_bytes=excluded.size_bytes",
 		s.Name, s.Owner, s.DeployID, s.DeployedBy, s.DeployedAt, s.SizeBytes, s.Visibility, groupsJSON)
 	return shimExec(err, d.driver)
 }
@@ -173,7 +179,7 @@ func (d *DB) UpdateSiteVisibility(ctx context.Context, name, visibility string, 
 		groupsJSON = marshalVisibilityGroups(groups)
 	}
 	res, err := d.ExecContext(ctx,
-		`UPDATE sites SET visibility=?, visibility_groups=? WHERE name=?`,
+		"UPDATE sites SET visibility=?, visibility_groups=? WHERE name=?",
 		visibility, groupsJSON, name)
 	if err != nil {
 		return false, shimExec(err, d.driver)
@@ -187,7 +193,7 @@ func (d *DB) UpdateSiteVisibility(ctx context.Context, name, visibility string, 
 
 func (d *DB) GetSite(ctx context.Context, name string) (*SiteRecord, error) {
 	row := d.QueryRowContext(ctx,
-		`SELECT name, owner, deploy_id, deployed_by, deployed_at, size_bytes, visibility, visibility_groups FROM sites WHERE name=?`, name)
+		"SELECT name, owner, deploy_id, deployed_by, deployed_at, size_bytes, visibility, visibility_groups FROM sites WHERE name=?", name)
 	s, err := scanSite(row)
 	if err != nil {
 		return nil, shimQuery(err, d.driver)
@@ -197,7 +203,7 @@ func (d *DB) GetSite(ctx context.Context, name string) (*SiteRecord, error) {
 
 func (d *DB) ListSites(ctx context.Context) ([]SiteRecord, error) {
 	rows, err := d.QueryContext(ctx,
-		`SELECT name, owner, deploy_id, deployed_by, deployed_at, size_bytes, visibility, visibility_groups FROM sites ORDER BY deployed_at DESC`)
+		"SELECT name, owner, deploy_id, deployed_by, deployed_at, size_bytes, visibility, visibility_groups FROM sites ORDER BY deployed_at DESC")
 	if err != nil {
 		return nil, shimQuery(err, d.driver)
 	}
@@ -215,23 +221,23 @@ func (d *DB) ListSites(ctx context.Context) ([]SiteRecord, error) {
 
 func (d *DB) InsertAudit(ctx context.Context, e *AuditEntry) error {
 	_, err := d.ExecContext(ctx,
-		`INSERT INTO audit_log (timestamp, user_email, site, action, detail) VALUES (?, ?, ?, ?, ?)`,
+		"INSERT INTO audit_log (timestamp, user_email, site, action, detail) VALUES (?, ?, ?, ?, ?)",
 		e.Timestamp, e.UserEmail, e.Site, e.Action, e.Detail)
 	return shimExec(err, d.driver)
 }
 
 func (d *DB) SearchAudit(ctx context.Context, site, user string, limit int) ([]AuditEntry, error) {
-	q := `SELECT id, timestamp, user_email, site, action, detail FROM audit_log WHERE 1=1`
+	q := "SELECT id, timestamp, user_email, site, action, detail FROM audit_log WHERE 1=1"
 	args := []any{}
 	if site != "" {
-		q += ` AND site=?`
+		q += " AND site=?"
 		args = append(args, site)
 	}
 	if user != "" {
-		q += ` AND user_email=?`
+		q += " AND user_email=?"
 		args = append(args, user)
 	}
-	q += ` ORDER BY timestamp DESC LIMIT ?`
+	q += " ORDER BY timestamp DESC LIMIT ?"
 	args = append(args, limit)
 	rows, err := d.QueryContext(ctx, q, args...)
 	if err != nil {
@@ -259,9 +265,49 @@ func (d *DB) CountWarehouseQueriesSince(ctx context.Context, cutoff time.Time) (
 
 func (d *DB) InsertAIUsage(ctx context.Context, u *AIUsage) error {
 	_, err := d.ExecContext(ctx,
-		`INSERT INTO ai_usage (user_email, site, timestamp) VALUES (?, ?, ?)`,
+		"INSERT INTO ai_usage (user_email, site, timestamp) VALUES (?, ?, ?)",
 		u.UserEmail, u.Site, u.Timestamp)
 	return shimExec(err, d.driver)
+}
+
+func (d *DB) InsertFile(ctx context.Context, f *FileRecord) error {
+	_, err := d.ExecContext(ctx,
+		"INSERT INTO uploaded_files (id, site, filename, content_type, size_bytes, storage_path, uploaded_by, uploaded_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+		f.ID, f.Site, f.Filename, f.ContentType, f.SizeBytes, f.StoragePath, f.UploadedBy, f.UploadedAt)
+	return shimExec(err, d.driver)
+}
+
+func (d *DB) ListFiles(ctx context.Context, site string, limit int) ([]FileRecord, error) {
+	rows, err := d.QueryContext(ctx,
+		"SELECT id, site, filename, content_type, size_bytes, storage_path, uploaded_by, uploaded_at FROM uploaded_files WHERE site=? ORDER BY uploaded_at DESC LIMIT ?",
+		site, limit)
+	if err != nil {
+		return nil, shimQuery(err, d.driver)
+	}
+	defer rows.Close()
+	var out []FileRecord
+	for rows.Next() {
+		var f FileRecord
+		if err := rows.Scan(&f.ID, &f.Site, &f.Filename, &f.ContentType, &f.SizeBytes, &f.StoragePath, &f.UploadedBy, &f.UploadedAt); err != nil {
+			return nil, err
+		}
+		out = append(out, f)
+	}
+	return out, nil
+}
+
+func (d *DB) GetFileByID(ctx context.Context, site, id string) (*FileRecord, error) {
+	var f FileRecord
+	err := d.QueryRowContext(ctx,
+		"SELECT id, site, filename, content_type, size_bytes, storage_path, uploaded_by, uploaded_at FROM uploaded_files WHERE id=? AND site=?",
+		id, site).Scan(&f.ID, &f.Site, &f.Filename, &f.ContentType, &f.SizeBytes, &f.StoragePath, &f.UploadedBy, &f.UploadedAt)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, shimQuery(err, d.driver)
+	}
+	return &f, nil
 }
 
 func scanDocument(row *sql.Row) (*Document, error) {
