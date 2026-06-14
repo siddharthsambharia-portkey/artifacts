@@ -1,7 +1,6 @@
 package files
 
 import (
-	"context"
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
@@ -80,32 +79,38 @@ func (h *Handler) Upload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	url := fmt.Sprintf("/api/v1/files/%s", id)
-	_ = insertFileRecord(r.Context(), h.db, id, site, header.Filename, ct, header.Size, storagePath, u.Email)
+	_ = h.db.InsertFile(r.Context(), &db.FileRecord{
+		ID:          id,
+		Site:        site,
+		Filename:    header.Filename,
+		ContentType: ct,
+		SizeBytes:   header.Size,
+		StoragePath: storagePath,
+		UploadedBy:  u.Email,
+		UploadedAt:  time.Now(),
+	})
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(UploadResponse{ID: id, URL: url, Filename: header.Filename, Size: header.Size})
 }
 
 func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 	site := h.cfg.SiteFromHost(r.Host)
-	rows, err := h.db.QueryContext(r.Context(),
-		`SELECT id, filename, content_type, size_bytes, uploaded_by, uploaded_at FROM uploaded_files WHERE site=? ORDER BY uploaded_at DESC LIMIT 100`,
-		site)
+	recs, err := h.db.ListFiles(r.Context(), site, 100)
 	if err != nil {
 		http.Error(w, fmt.Sprintf(`{"error":"List files failed: %v"}`, err), http.StatusInternalServerError)
 		return
 	}
-	defer rows.Close()
-	var files []FileRecord
-	for rows.Next() {
-		var f FileRecord
-		if err := rows.Scan(&f.ID, &f.Filename, &f.ContentType, &f.Size, &f.UploadedBy, &f.UploadedAt); err != nil {
-			continue
-		}
-		f.URL = fmt.Sprintf("/api/v1/files/%s", f.ID)
-		files = append(files, f)
-	}
-	if files == nil {
-		files = []FileRecord{}
+	files := make([]FileRecord, 0, len(recs))
+	for _, rec := range recs {
+		files = append(files, FileRecord{
+			ID:          rec.ID,
+			Filename:    rec.Filename,
+			ContentType: rec.ContentType,
+			Size:        rec.SizeBytes,
+			URL:         fmt.Sprintf("/api/v1/files/%s", rec.ID),
+			UploadedBy:  rec.UploadedBy,
+			UploadedAt:  rec.UploadedAt,
+		})
 	}
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(files)
@@ -125,15 +130,16 @@ func (h *Handler) Serve(w http.ResponseWriter, r *http.Request) {
 	}
 	site := h.cfg.SiteFromHost(r.Host)
 	var storagePath string
-	err := h.db.QueryRowContext(r.Context(),
-		`SELECT storage_path FROM uploaded_files WHERE id=? AND site=?`, id, site).Scan(&storagePath)
-	if err != nil {
+	rec, err := h.db.GetFileByID(r.Context(), site, id)
+	if err != nil || rec == nil {
 		objs, _ := h.store.List(r.Context(), fmt.Sprintf("uploads/%s/%s", site, id))
 		if len(objs) == 0 {
 			http.NotFound(w, r)
 			return
 		}
 		storagePath = objs[0].Path
+	} else {
+		storagePath = rec.StoragePath
 	}
 	rc, info, err := h.store.Get(r.Context(), storagePath)
 	if err != nil {
@@ -156,14 +162,6 @@ func isDangerousContentType(ct string) bool {
 		}
 	}
 	return false
-}
-
-func insertFileRecord(ctx context.Context, database *db.DB, id, site, filename, ct string, size int64, path, user string) error {
-	_, err := database.ExecContext(ctx,
-		`INSERT INTO uploaded_files (id, site, filename, content_type, size_bytes, storage_path, uploaded_by, uploaded_at)
-		 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-		id, site, filename, ct, size, path, user, time.Now())
-	return err
 }
 
 func randomID() string {
