@@ -180,10 +180,7 @@ func (h *Handler) checkCallQuota(r *http.Request, email string) error {
 		return nil
 	}
 	cutoff := time.Now().Add(-24 * time.Hour)
-	var total int
-	err := h.db.QueryRowContext(r.Context(),
-		`SELECT COUNT(*) FROM ai_usage WHERE user_email=? AND timestamp > ?`,
-		email, cutoff).Scan(&total)
+	total, err := h.db.CountAIUsageSince(r.Context(), email, cutoff)
 	if err != nil {
 		return fmt.Errorf("quota check failed: %w", err)
 	}
