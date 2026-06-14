@@ -249,6 +249,14 @@ func (d *DB) SearchAudit(ctx context.Context, site, user string, limit int) ([]A
 	return out, nil
 }
 
+func (d *DB) CountWarehouseQueriesSince(ctx context.Context, cutoff time.Time) (int, error) {
+	var n int
+	err := d.QueryRowContext(ctx,
+		`SELECT COUNT(*) FROM audit_log WHERE action='warehouse_query' AND timestamp > ?`,
+		cutoff).Scan(&n)
+	return n, shimQuery(err, d.driver)
+}
+
 func (d *DB) InsertAIUsage(ctx context.Context, u *AIUsage) error {
 	_, err := d.ExecContext(ctx,
 		`INSERT INTO ai_usage (user_email, site, timestamp) VALUES (?, ?, ?)`,
