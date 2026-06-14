@@ -77,3 +77,64 @@ func TestCountWarehouseQueriesSince(t *testing.T) {
 		})
 	}
 }
+
+func TestCountAIUsageSince(t *testing.T) {
+	d := openTestDB(t)
+	ctx := context.Background()
+	const email = "alice@example.com"
+	now := time.Now()
+
+	usages := []AIUsage{
+		{UserEmail: email, Site: "s1", Timestamp: now},
+		{UserEmail: email, Site: "s2", Timestamp: now.Add(-1 * time.Hour)},
+		{UserEmail: email, Site: "s3", Timestamp: now.Add(-25 * time.Hour)},
+		{UserEmail: "bob@example.com", Site: "s1", Timestamp: now},
+	}
+	for i := range usages {
+		if err := d.InsertAIUsage(ctx, &usages[i]); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	cutoff := now.Add(-24 * time.Hour)
+	n, err := d.CountAIUsageSince(ctx, email, cutoff)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if n != 2 {
+		t.Fatalf("want 2, got %d", n)
+	}
+}
+
+func TestListAIUsageSummary(t *testing.T) {
+	d := openTestDB(t)
+	ctx := context.Background()
+	now := time.Now()
+
+	usages := []AIUsage{
+		{UserEmail: "alice@example.com", Site: "s1", Timestamp: now},
+		{UserEmail: "alice@example.com", Site: "s1", Timestamp: now},
+		{UserEmail: "alice@example.com", Site: "s1", Timestamp: now},
+		{UserEmail: "bob@example.com", Site: "s2", Timestamp: now},
+		{UserEmail: "bob@example.com", Site: "s2", Timestamp: now},
+	}
+	for i := range usages {
+		if err := d.InsertAIUsage(ctx, &usages[i]); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	summary, err := d.ListAIUsageSummary(ctx, 10)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(summary) != 2 {
+		t.Fatalf("want 2 rows, got %d", len(summary))
+	}
+	if summary[0].UserEmail != "alice@example.com" || summary[0].Requests != 3 {
+		t.Fatalf("first row: want alice/3, got %s/%d", summary[0].UserEmail, summary[0].Requests)
+	}
+	if summary[1].UserEmail != "bob@example.com" || summary[1].Requests != 2 {
+		t.Fatalf("second row: want bob/2, got %s/%d", summary[1].UserEmail, summary[1].Requests)
+	}
+}
