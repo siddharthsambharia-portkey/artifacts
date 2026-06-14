@@ -13,18 +13,22 @@ import (
 	"time"
 
 	"github.com/siddharthsambharia-portkey/artifacts/internal/auth"
-	"github.com/siddharthsambharia-portkey/artifacts/internal/config"
 	"github.com/siddharthsambharia-portkey/artifacts/internal/db"
 	"github.com/siddharthsambharia-portkey/artifacts/internal/storage"
 )
 
+type FilesConfig interface {
+	SiteFromHost(host string) string
+	UploadMaxMB() int
+}
+
 type Handler struct {
-	cfg   *config.Config
+	cfg   FilesConfig
 	store storage.Store
 	db    *db.DB
 }
 
-func NewHandler(cfg *config.Config, store storage.Store, database *db.DB) *Handler {
+func NewHandler(cfg FilesConfig, store storage.Store, database *db.DB) *Handler {
 	return &Handler{cfg: cfg, store: store, db: database}
 }
 
@@ -48,7 +52,7 @@ type FileRecord struct {
 func (h *Handler) Upload(w http.ResponseWriter, r *http.Request) {
 	u := auth.UserFromContext(r.Context())
 	site := h.cfg.SiteFromHost(r.Host)
-	maxBytes := int64(h.cfg.Governance.Quotas.UploadMaxMB) * 1024 * 1024
+	maxBytes := int64(h.cfg.UploadMaxMB()) * 1024 * 1024
 	r.Body = http.MaxBytesReader(w, r.Body, maxBytes)
 	if err := r.ParseMultipartForm(maxBytes); err != nil {
 		http.Error(w, `{"error":"File too large or invalid multipart form. Check upload_max_mb in artifact.yaml."}`, http.StatusBadRequest)

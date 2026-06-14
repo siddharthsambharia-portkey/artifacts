@@ -6,17 +6,16 @@ import (
 	"os"
 	"strings"
 
-	"github.com/siddharthsambharia-portkey/artifacts/internal/config"
 )
 
 type snowflakeQuerier struct {
 	inner Querier
 }
 
-func newSnowflakeQuerier(cfg *config.Config) (*snowflakeQuerier, error) {
-	dsn := os.Getenv(cfg.Warehouse.CredentialsEnv)
+func newSnowflakeQuerier(cfg WarehouseConfig) (*snowflakeQuerier, error) {
+	dsn := os.Getenv(cfg.WarehouseCredentialsEnv())
 	if dsn == "" {
-		return nil, fmt.Errorf("snowflake DSN not set — configure %s", cfg.Warehouse.CredentialsEnv)
+		return nil, fmt.Errorf("snowflake DSN not set — configure %s", cfg.WarehouseCredentialsEnv())
 	}
 	if strings.HasPrefix(dsn, "postgres://") || strings.HasPrefix(dsn, "postgresql://") {
 		inner, err := newPostgresQuerier(dsn)
@@ -25,7 +24,7 @@ func newSnowflakeQuerier(cfg *config.Config) (*snowflakeQuerier, error) {
 		}
 		return &snowflakeQuerier{inner: inner}, nil
 	}
-	return nil, fmt.Errorf("snowflake: use a postgres-compatible DSN in %s, or set warehouse.driver: postgres", cfg.Warehouse.CredentialsEnv)
+	return nil, fmt.Errorf("snowflake: use a postgres-compatible DSN in %s, or set warehouse.driver: postgres", cfg.WarehouseCredentialsEnv())
 }
 
 func (s *snowflakeQuerier) Query(ctx context.Context, sqlText string, rowLimit int) ([]map[string]any, error) {
