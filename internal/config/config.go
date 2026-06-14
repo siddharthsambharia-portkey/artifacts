@@ -241,3 +241,21 @@ func (c *Config) IsApexHost(host string) bool {
 	host = strings.Split(host, ":")[0]
 	return host == c.Domain || host == "localhost"
 }
+
+func (c *Config) AIUpstreamURL() string          { return c.AI.UpstreamURL }
+func (c *Config) AIModelsAllowlist() []string    { return c.AI.ModelsAllowlist }
+func (c *Config) AIImageModel() string           { return c.AI.ImageModel }
+func (c *Config) AIAPIKeyEnv() string            { return c.AI.APIKeyEnv }
+func (c *Config) AIDailyCallsPerUser() int       { return c.Governance.Quotas.AIDailyCallsPerUser }
+
+func (c *Config) UploadMaxMB() int { return c.Governance.Quotas.UploadMaxMB }
+
+func (c *Config) SlackMode() string               { return c.Notify.Slack.Mode }
+func (c *Config) SlackSecretEnv() string          { return c.Notify.Slack.SecretEnv }
+func (c *Config) SlackChannelAllowlist() []string { return c.Notify.Slack.ChannelAllowlist }
+
+func (c *Config) WarehouseDriver() string            { return c.Warehouse.Driver }
+func (c *Config) WarehouseCredentialsEnv() string    { return c.Warehouse.CredentialsEnv }
+func (c *Config) WarehouseAllowedDatasets() []string { return c.Warehouse.AllowedDatasets }
+func (c *Config) WarehouseRowLimit() int             { return c.Warehouse.RowLimit }
+func (c *Config) WarehouseDailyQueriesPerUser() int  { return c.Governance.Quotas.WarehouseDailyQueriesPerUser }

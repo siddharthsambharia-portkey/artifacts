@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/siddharthsambharia-portkey/artifacts/internal/auth"
-	"github.com/siddharthsambharia-portkey/artifacts/internal/config"
 	"github.com/siddharthsambharia-portkey/artifacts/internal/db"
 )
 
@@ -39,18 +38,25 @@ func NewHTTPPoster() SlackPoster {
 	return &httpSlackPoster{}
 }
 
+type NotifyConfig interface {
+	SiteFromHost(host string) string
+	SlackMode() string
+	SlackSecretEnv() string
+	SlackChannelAllowlist() []string
+}
+
 type Handler struct {
-	cfg    *config.Config
+	cfg    NotifyConfig
 	db     *db.DB
 	poster SlackPoster
 }
 
-func NewHandler(cfg *config.Config, database *db.DB, poster SlackPoster) *Handler {
+func NewHandler(cfg NotifyConfig, database *db.DB, poster SlackPoster) *Handler {
 	return &Handler{cfg: cfg, db: database, poster: poster}
 }
 
 func (h *Handler) Slack(w http.ResponseWriter, r *http.Request) {
-	if h.cfg.Notify.Slack.Mode == "off" {
+	if h.cfg.SlackMode() == "off" {
 		w.WriteHeader(http.StatusNoContent)
 		return
 	}
@@ -69,7 +75,7 @@ func (h *Handler) Slack(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, fmt.Sprintf(`{"error":"Channel %q is not in notify.slack.channel_allowlist. Ask an admin to add it."}`, req.Channel), http.StatusForbidden)
 		return
 	}
-	secret := os.Getenv(h.cfg.Notify.Slack.SecretEnv)
+	secret := os.Getenv(h.cfg.SlackSecretEnv())
 	if secret == "" {
 		http.Error(w, `{"error":"Slack secret not configured. Set the env var referenced by notify.slack.secret_env."}`, http.StatusServiceUnavailable)
 		return
@@ -90,11 +96,11 @@ func (h *Handler) Slack(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) channelAllowed(channel string) bool {
-	if len(h.cfg.Notify.Slack.ChannelAllowlist) == 0 {
+	if len(h.cfg.SlackChannelAllowlist()) == 0 {
 		return true
 	}
 	channel = strings.TrimPrefix(channel, "#")
-	for _, c := range h.cfg.Notify.Slack.ChannelAllowlist {
+	for _, c := range h.cfg.SlackChannelAllowlist() {
 		if strings.TrimPrefix(c, "#") == channel {
 			return true
 		}
