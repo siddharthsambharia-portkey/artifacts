@@ -50,29 +50,16 @@ func (h *Handler) Usage(w http.ResponseWriter, r *http.Request) {
 	if !h.requireAdmin(w, r) {
 		return
 	}
-	rows, err := h.db.QueryContext(r.Context(),
-		`SELECT user_email, site, COUNT(*) as requests
-		 FROM ai_usage GROUP BY user_email, site ORDER BY requests DESC LIMIT 100`)
-	type usageRow struct {
-		UserEmail string `json:"user_email"`
-		Site      string `json:"site"`
-		Requests  int    `json:"requests"`
-	}
-	var out []usageRow
-	if err == nil {
-		defer rows.Close()
-		for rows.Next() {
-			var u usageRow
-			rows.Scan(&u.UserEmail, &u.Site, &u.Requests)
-			out = append(out, u)
-		}
+	out, err := h.db.ListAIUsageSummary(r.Context(), 100)
+	if err != nil {
+		writeError(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 	if out == nil {
-		out = []usageRow{}
+		out = []db.UsageSummary{}
 	}
 	writeJSON(w, out)
 }
-
 func (h *Handler) Config(w http.ResponseWriter, r *http.Request) {
 	if !h.requireAdmin(w, r) {
 		return
