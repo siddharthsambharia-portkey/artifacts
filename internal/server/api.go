@@ -226,9 +226,7 @@ func (a *API) publishDoc(site, collection, eventType string, doc *db.Document) {
 	if a.events == nil {
 		return
 	}
-	if hub, ok := a.events.(*realtime.Hub); ok {
-		hub.PublishDocumentEvent(site, collection, eventType, doc)
-	}
+	a.events.PublishDocumentEvent(site, collection, eventType, doc)
 }
 
 func (a *API) checkQuota(r *http.Request, site string) error {

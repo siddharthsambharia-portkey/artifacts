@@ -5,6 +5,7 @@ import "encoding/json"
 // EventPublisher publishes realtime events to connected clients.
 type EventPublisher interface {
 	PublishDBEvent(e DBEvent)
+	PublishDocumentEvent(site, collection, eventType string, doc any)
 }
 
 func (h *Hub) PublishDocumentEvent(site, collection, eventType string, doc any) {
