@@ -5,10 +5,10 @@ Execute in the order below unless dependencies say otherwise. Each executor:
 read the plan fully before starting, honor its STOP conditions, and update
 your row when done.
 
-Last reconciled: 2026-06-13 at `31dffed` (plan 011, after relanding 003–007 via
-PR #14 + docs PR #13). Statuses below are verified against the code by probe,
-not by self-declaration — see plan 011 for the probe matrix. All of 001–011 are
-now DONE on `main`; full suite passes with `-race`.
+Last reconciled: 2026-06-15 at `489308a` (architecture deepening sprint, PRs #27–#35).
+Statuses below are verified against the code by probe, not by self-declaration —
+see plan 011 for the probe matrix. All of 001–011 are DONE on `main`; full suite
+passes with `-race`.
 
 Selection note: the audit ran non-interactively, so plans were written for the
 top findings by leverage (impact ÷ effort, weighted by confidence) per the
@@ -43,6 +43,22 @@ Status values: TODO | IN PROGRESS | DONE | BLOCKED (with one-line reason) | REJE
 - 008 before 010: the Drop UI consumes the deploy endpoint's exact multipart contract (`site`/`files`/`zip`/`confirm_overwrite`; 200/409/422 shapes).
 - 009 before 010: the Drop UI composes the `/ui.css` component classes and unhides the `#new-site` button that 009's home page ships hidden.
 - 008 and 009 are independent of each other and can run in parallel (008 touches `server.go` routes, 009 touches `server.go` for `/ui.css` — coordinate the merge).
+
+## Architecture deepening (2026-06-15, PRs #27–#35)
+
+Five deepening opportunities identified by an architecture review against the domain model.
+Implemented as 8 vertical slices across 9 PRs; all merged to `main` at `489308a`.
+
+| Slice | PR | What shipped |
+|-------|----|--------------|
+| Migrate `ai_usage` SQL into `db` | #27 | `CountAIUsageSince`, `ListAIUsageSummary` added to `db.DB`; raw SQL removed from `ai` and `admin` packages |
+| Migrate `uploaded_files` SQL into `db` | #28 | `InsertFile`, `ListFiles`, `GetFileByID` added; raw SQL removed from `files` package; HTTP handler tests added |
+| Migrate `audit_log` quota SQL into `db` | #29 | `CountWarehouseQueriesSince` added; raw SQL removed from `warehouse` package |
+| Fix `EventPublisher` seam | #30 | `PublishDocumentEvent` added to interface; type assert on `*Hub` deleted; `fakePublisher` in tests |
+| Inject `Governor` into `admin.Handler` | #31 | Per-request `governance.New(cfg)` replaced with constructor injection |
+| Add `SlackPoster` seam to `notify` | #32 | `SlackPoster` interface injected; first 4 unit tests for the `notify` package |
+| Narrow config interfaces per handler | #34 | `AIConfig`, `FilesConfig`, `NotifyConfig`, `WarehouseConfig` interfaces; `*config.Config` satisfies all |
+| Seal `db` escape hatch | #35 | `*sql.DB` made private field; `session.go` migrated to named methods as bonus; `go test -race` green |
 
 ## Backlog (audited, real, not yet planned)
 

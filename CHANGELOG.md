@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- `db.DB` escape hatch sealed — `*sql.DB` is now a private field; all SQL for `ai_usage`, `uploaded_files`, `audit_log` quota, and sessions is encapsulated behind named domain methods (`CountAIUsageSince`, `ListAIUsageSummary`, `InsertFile`, `ListFiles`, `GetFileByID`, `CountWarehouseQueriesSince`, `InsertSession`, `GetSession`, `DeleteSession`)
+- `realtime.EventPublisher` interface now includes `PublishDocumentEvent`; type assert on `*Hub` removed from DB API handler
+- `governance.Governor` injected into `admin.Handler` at construction time instead of being re-allocated per request
+- Feature handlers (`ai`, `files`, `notify`, `warehouse`) now accept narrow config interfaces instead of `*config.Config`
+- `notify.Handler` accepts a `SlackPoster` interface; first unit tests added covering mode-off, allowlist enforcement, valid post, and audit-row insertion
+
 ### Added
 
 - Drop-to-deploy: drag a folder, file, or zip onto the home page to publish a site, no CLI required
