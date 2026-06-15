@@ -16,10 +16,11 @@ import (
 type Handler struct {
 	cfg *config.Config
 	db  *db.DB
+	gov *governance.Governor
 }
 
-func NewHandler(cfg *config.Config, database *db.DB) *Handler {
-	return &Handler{cfg: cfg, db: database}
+func NewHandler(cfg *config.Config, database *db.DB, gov *governance.Governor) *Handler {
+	return &Handler{cfg: cfg, db: database, gov: gov}
 }
 
 func (h *Handler) Audit(w http.ResponseWriter, r *http.Request) {
@@ -145,7 +146,7 @@ func (h *Handler) Stats(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) requireAdmin(w http.ResponseWriter, r *http.Request) bool {
 	u := auth.UserFromContext(r.Context())
-	if u == nil || !governance.New(h.cfg).IsAdmin(u) {
+	if u == nil || !h.gov.IsAdmin(u) {
 		writeError(w, "Admin access required. Your account must be in the admins group.", http.StatusForbidden)
 		return false
 	}
