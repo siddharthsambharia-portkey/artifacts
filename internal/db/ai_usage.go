@@ -13,14 +13,14 @@ type UsageSummary struct {
 
 func (d *DB) CountAIUsageSince(ctx context.Context, email string, cutoff time.Time) (int, error) {
 	var n int
-	err := d.QueryRowContext(ctx,
+	err := d.db.QueryRowContext(ctx,
 		`SELECT COUNT(*) FROM ai_usage WHERE user_email=? AND timestamp > ?`,
 		email, cutoff).Scan(&n)
 	return n, shimQuery(err, d.driver)
 }
 
 func (d *DB) ListAIUsageSummary(ctx context.Context, limit int) ([]UsageSummary, error) {
-	rows, err := d.QueryContext(ctx,
+	rows, err := d.db.QueryContext(ctx,
 		`SELECT user_email, site, COUNT(*) as requests FROM ai_usage GROUP BY user_email, site ORDER BY requests DESC LIMIT ?`,
 		limit)
 	if err != nil {

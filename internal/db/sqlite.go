@@ -18,5 +18,5 @@ func openSQLite(path string) (*DB, error) {
 		return nil, fmt.Errorf("open sqlite database %s: %w", path, err)
 	}
 	sqlDB.SetMaxOpenConns(1)
-	return &DB{DB: sqlDB, driver: "sqlite"}, nil
+	return &DB{db: sqlDB, driver: "sqlite"}, nil
 }

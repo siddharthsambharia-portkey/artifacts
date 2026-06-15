@@ -21,30 +21,24 @@ func NewSessionStore(database *db.DB) *SessionStore {
 func (s *SessionStore) Create(ctx context.Context, user *User, ttl time.Duration) (string, error) {
 	id := randomSessionID()
 	expires := time.Now().Add(ttl)
-	_, err := s.db.ExecContext(ctx,
-		`INSERT INTO sessions (id, email, name, groups_json, expires_at) VALUES (?, ?, ?, ?, ?)`,
-		id, user.Email, user.Name, groupsJSON(user.Groups), expires)
+	err := s.db.InsertSession(ctx, id, user.Email, user.Name, groupsJSON(user.Groups), expires)
 	return id, err
 }
 
 func (s *SessionStore) Get(ctx context.Context, id string) (*User, error) {
-	var email, name, groupsRaw string
-	var expires time.Time
-	err := s.db.QueryRowContext(ctx,
-		`SELECT email, name, groups_json, expires_at FROM sessions WHERE id=?`, id).Scan(&email, &name, &groupsRaw, &expires)
+	email, name, groupsRaw, expires, err := s.db.GetSession(ctx, id)
 	if err != nil {
 		return nil, err
 	}
 	if time.Now().After(expires) {
-		s.db.ExecContext(ctx, `DELETE FROM sessions WHERE id=?`, id)
+		_ = s.db.DeleteSession(ctx, id)
 		return nil, fmt.Errorf("session expired")
 	}
 	return &User{Email: email, Name: name, Groups: parseGroups(groupsRaw)}, nil
 }
 
 func (s *SessionStore) Delete(ctx context.Context, id string) error {
-	_, err := s.db.ExecContext(ctx, `DELETE FROM sessions WHERE id=?`, id)
-	return err
+	return s.db.DeleteSession(ctx, id)
 }
 
 func randomSessionID() string {
