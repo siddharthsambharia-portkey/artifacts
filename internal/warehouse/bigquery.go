@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"cloud.google.com/go/bigquery"
-	"github.com/siddharthsambharia-portkey/artifacts/internal/config"
 	"google.golang.org/api/iterator"
 )
 
@@ -15,7 +14,7 @@ type bigQueryQuerier struct {
 	client *bigquery.Client
 }
 
-func newBigQueryQuerier(cfg *config.Config) (*bigQueryQuerier, error) {
+func newBigQueryQuerier(_ WarehouseConfig) (*bigQueryQuerier, error) {
 	ctx := context.Background()
 	project := os.Getenv("ARTIFACT_BIGQUERY_PROJECT")
 	if project == "" {
