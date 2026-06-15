@@ -16,7 +16,7 @@ func openTestDB(t *testing.T) *DB {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { sqlDB.Close() })
-	d := &DB{DB: sqlDB, driver: "sqlite"}
+	d := &DB{db: sqlDB, driver: "sqlite"}
 	if err := d.Migrate(context.Background()); err != nil {
 		t.Fatal(err)
 	}
@@ -136,6 +136,8 @@ func TestListAIUsageSummary(t *testing.T) {
 	}
 	if summary[1].UserEmail != "bob@example.com" || summary[1].Requests != 2 {
 		t.Fatalf("second row: want bob/2, got %s/%d", summary[1].UserEmail, summary[1].Requests)
+	}
+}
 
 func TestInsertFile(t *testing.T) {
 	d := openTestDB(t)

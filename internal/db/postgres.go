@@ -13,5 +13,5 @@ func openPostgres(url string) (*DB, error) {
 		return nil, fmt.Errorf("open postgres database: %w", err)
 	}
 	sqlDB.SetMaxOpenConns(25)
-	return &DB{DB: sqlDB, driver: "postgres"}, nil
+	return &DB{db: sqlDB, driver: "postgres"}, nil
 }
