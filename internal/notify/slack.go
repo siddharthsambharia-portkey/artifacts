@@ -2,6 +2,7 @@ package notify
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -14,23 +15,48 @@ import (
 	"github.com/siddharthsambharia-portkey/artifacts/internal/db"
 )
 
-type Handler struct {
-	cfg *config.Config
-	db  *db.DB
+type SlackPoster interface {
+	Post(ctx context.Context, webhookURL string, body []byte) error
 }
 
-func NewHandler(cfg *config.Config, database *db.DB) *Handler {
-	return &Handler{cfg: cfg, db: database}
+type httpSlackPoster struct{}
+
+func (p *httpSlackPoster) Post(ctx context.Context, webhookURL string, body []byte) error {
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, webhookURL, bytes.NewReader(body))
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return err
+	}
+	resp.Body.Close()
+	return nil
+}
+
+func NewHTTPPoster() SlackPoster {
+	return &httpSlackPoster{}
+}
+
+type Handler struct {
+	cfg    *config.Config
+	db     *db.DB
+	poster SlackPoster
+}
+
+func NewHandler(cfg *config.Config, database *db.DB, poster SlackPoster) *Handler {
+	return &Handler{cfg: cfg, db: database, poster: poster}
 }
 
 func (h *Handler) Slack(w http.ResponseWriter, r *http.Request) {
 	if h.cfg.Notify.Slack.Mode == "off" {
-		http.Error(w, `{"error":"Slack notifications are not configured. Set notify.slack.mode in artifact.yaml."}`, http.StatusServiceUnavailable)
+		w.WriteHeader(http.StatusNoContent)
 		return
 	}
 	u := auth.UserFromContext(r.Context())
 	site := h.cfg.SiteFromHost(r.Host)
-	r.Body = http.MaxBytesReader(w, r.Body, 1<<20) // 1 MiB JSON cap
+	r.Body = http.MaxBytesReader(w, r.Body, 1<<20)
 	var req struct {
 		Channel string `json:"channel"`
 		Message string `json:"message"`
@@ -50,17 +76,12 @@ func (h *Handler) Slack(w http.ResponseWriter, r *http.Request) {
 	}
 	payload := map[string]string{"text": req.Message, "channel": req.Channel}
 	body, _ := json.Marshal(payload)
-	resp, err := http.Post(secret, "application/json", bytes.NewReader(body))
-	if err != nil {
+	ctx := r.Context()
+	if err := h.poster.Post(ctx, secret, body); err != nil {
 		http.Error(w, fmt.Sprintf(`{"error":"Failed to post to Slack: %v"}`, err), http.StatusBadGateway)
 		return
 	}
-	defer resp.Body.Close()
-	if resp.StatusCode >= 400 {
-		http.Error(w, `{"error":"Slack rejected the message. Check webhook URL and channel."}`, http.StatusBadGateway)
-		return
-	}
-	_ = h.db.InsertAudit(r.Context(), &db.AuditEntry{
+	_ = h.db.InsertAudit(ctx, &db.AuditEntry{
 		Timestamp: time.Now(), UserEmail: u.Email,
 		Site: site, Action: "slack_notify", Detail: req.Channel,
 	})
