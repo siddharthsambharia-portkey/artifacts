@@ -74,9 +74,11 @@ One Go binary. Wildcard DNS `*.artifact.corp.com` → Artifact. A **2 vCPU / 4 G
 |---|---|
 | Docker Compose (dev/demo) | `deploy/docker-compose.yml` |
 | Kubernetes + Helm | `deploy/helm/artifact/` |
+| GCP + Okta Helm profile | `deploy/helm/artifact/values-gcp.yaml` |
 | GCP starter (GCS + Cloud SQL) | `deploy/terraform/gcp/main.tf` |
 | AWS starter (S3 + RDS) | `deploy/terraform/aws/main.tf` |
 | Okta OIDC | `docs/auth-okta.md` |
+| Wildcard TLS (cert-manager, GCP) | `deploy/recipes/wildcard-tls-gcp.md` |
 | Header-trust (Pomerium) | `deploy/recipes/pomerium.md` |
 
 Terraform examples are starting points — add load balancers, networking, and your identity proxy per your org.
@@ -93,7 +95,10 @@ Full docs live in [`docs/`](docs/) — start at the [documentation index](docs/R
 | Every CLI command | [CLI reference](docs/cli-reference.md) |
 | All `artifact.yaml` fields | [Configuration](docs/configuration.md) |
 | Deploy at your company | [Self-hosting](docs/self-hosting.md) |
+| Choosing an auth mode | [Auth overview](docs/auth-overview.md) |
 | Auth setup | [Okta](docs/auth-okta.md) · [Entra](docs/auth-entra.md) · [Google](docs/auth-google.md) · [header-trust](docs/auth-header-trust.md) |
+| AI provider wiring | [AI gateway](docs/ai-gateway.md) |
+| Read-only SQL | [Warehouse](docs/warehouse.md) |
 | Governance, quotas, admin | [Governance & admin](docs/governance-and-admin.md) |
 | Why no custom backends? | [FAQ](docs/faq.md) |
 
