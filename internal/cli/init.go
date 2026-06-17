@@ -50,7 +50,7 @@ func initCmd() *cobra.Command {
 			if err := os.WriteFile(filepath.Join(name, "artifact.json"), []byte(artifactJSON), 0644); err != nil {
 				return err
 			}
-			for _, skill := range []string{"SKILL.md", "AGENTS.md"} {
+			for _, skill := range []string{"AGENTS.md", "CLAUDE.md"} {
 				data, err := os.ReadFile(filepath.Join("skills", skill))
 				if err != nil {
 					data = []byte("# Artifact SDK\n\nSee https://github.com/siddharthsambharia-portkey/artifacts for docs.\n")

@@ -60,6 +60,31 @@ Implemented as 8 vertical slices across 9 PRs; all merged to `main` at `489308a`
 | Narrow config interfaces per handler | #34 | `AIConfig`, `FilesConfig`, `NotifyConfig`, `WarehouseConfig` interfaces; `*config.Config` satisfies all |
 | Seal `db` escape hatch | #35 | `*sql.DB` made private field; `session.go` migrated to named methods as bonus; `go test -race` green |
 
+## Docs & agent-files initiative (2026-06-16, `docs-NN`)
+
+Vertical slices that write the project's documentation and the two agent-file pairs
+(operator/platform + site-builder). Scope, audiences, and decisions were settled with the
+operator before drafting; these are issue-sized and independently verifiable (Markdown
+renders, relative links resolve, `go build ./...` green, `artifact init` drops the right
+files). Execute blockers first.
+
+| Issue | Title | Priority | Effort | Type | Depends on | Status |
+|-------|-------|----------|--------|------|------------|--------|
+| docs-01 | Site-builder agent skill pair (`AGENTS.md`+`CLAUDE.md`) + `init` wiring | P1 | S | AFK | — | DONE |
+| docs-02 | Docs — site-builder core set + index | P1 | M | AFK | — | DONE |
+| docs-03 | Docs — operator core (configuration + self-hosting + architecture) | P1 | M | AFK | — | DONE |
+| docs-04 | Docs — auth guide: Okta (OIDC) | P1 | S | AFK | — | DONE |
+| docs-05 | Docs — auth guide: Microsoft Entra ID (OIDC) | P2 | S | AFK | docs-04 (soft) | DONE |
+| docs-06 | Docs — auth guide: Google Workspace (OIDC) | P2 | S | AFK | docs-04 (soft) | DONE |
+| docs-07 | Docs — auth guide: header-trust (IAP/Pomerium/oauth2-proxy) | P1 | S | AFK | — | DONE |
+| docs-08 | Docs — feature guides (AI gateway, warehouse, governance & admin) | P2 | M | AFK | — | DONE |
+| docs-09 | Operator/platform agent pair (root `AGENTS.md`+`CLAUDE.md`) | P1 | M | AFK | docs-03 (soft) | DONE |
+| docs-10 | README documentation section + fix broken doc links | P2 | S | AFK | docs-02, docs-04 | TODO |
+
+> docs-02 is IN PROGRESS: `docs/README.md`, `docs/quickstart.md`, `docs/concepts.md`, and
+> `docs/sdk-reference.md` are already drafted; `docs/cli-reference.md` and `docs/faq.md`
+> remain.
+
 ## Backlog (audited, real, not yet planned)
 
 - **CLI deploy bypasses the server entirely** (`internal/cli/deploy.go:30-57` opens storage+DB directly and deploys as the hardcoded `auth.DevUser`): remote Builders can't deploy without bucket credentials, and governed-mode ownership is meaningless via CLI (every site is owned by `dev@localhost`). The server endpoint half **landed in plan 008** (`POST /api/v1/deploy`, verified at `cd7b16c`); remaining and still unplanned: pointing the CLI/MCP at that endpoint as authenticated clients (how does the CLI authenticate? device flow / token) (L effort, auth design needed).

@@ -1,4 +1,4 @@
-# Artifact — Agent Skill (AGENTS.md)
+# Artifact — Agent Skill (CLAUDE.md)
 
 You are building a site on **Artifact**, an internal hosting platform. Every request is from an authenticated employee. No API keys, no auth code, no backend — just HTML + the Artifact SDK.
 

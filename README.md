@@ -38,7 +38,7 @@ Or skip the CLI: open `http://localhost:8443` and drag a folder onto the page.
 | WebSockets | `artifact.ws.room('lobby')` |
 | Identity | `artifact.me` |
 | Slack | `artifact.notify.slack('#channel', 'msg')` |
-| Agent skills | `artifact init` drops SKILL.md |
+| Agent skills | `artifact init` drops `AGENTS.md` + `CLAUDE.md` |
 | MCP server | `artifact mcp` |
 
 ## Architecture
@@ -80,6 +80,26 @@ One Go binary. Wildcard DNS `*.artifact.corp.com` → Artifact. A **2 vCPU / 4 G
 | Header-trust (Pomerium) | `deploy/recipes/pomerium.md` |
 
 Terraform examples are starting points — add load balancers, networking, and your identity proxy per your org.
+
+## Documentation
+
+Full docs live in [`docs/`](docs/) — start at the [documentation index](docs/README.md).
+
+| Topic | Doc |
+|---|---|
+| Build a site in 60 seconds | [Quickstart](docs/quickstart.md) |
+| The model (trust bubble, constraints) | [Concepts](docs/concepts.md) |
+| Every `artifact.*` method | [SDK reference](docs/sdk-reference.md) |
+| Every CLI command | [CLI reference](docs/cli-reference.md) |
+| All `artifact.yaml` fields | [Configuration](docs/configuration.md) |
+| Deploy at your company | [Self-hosting](docs/self-hosting.md) |
+| Auth setup | [Okta](docs/auth-okta.md) · [Entra](docs/auth-entra.md) · [Google](docs/auth-google.md) · [header-trust](docs/auth-header-trust.md) |
+| Governance, quotas, admin | [Governance & admin](docs/governance-and-admin.md) |
+| Why no custom backends? | [FAQ](docs/faq.md) |
+
+Building sites with a coding agent? The skill in [`skills/`](skills/) is dropped into every
+`artifact init` project. Deploying Artifact with an agent? See the operator playbook at
+[`AGENTS.md`](AGENTS.md) / [`CLAUDE.md`](CLAUDE.md).
 
 ## Development
 

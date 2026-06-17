@@ -1,4 +1,4 @@
-# Artifact Operator Playbook (CLAUDE.md)
+# Artifact Operator Playbook
 
 **Artifact** is an open-source internal hosting platform: a single Go binary that gives every employee a live `<site>.<domain>` URL with a zero-config browser backend (database, realtime, files, AI, warehouse SQL, WebSockets, Slack notifications). It runs behind your company's SSO and is designed exclusively for company-internal use — all routes are identity-gated and sites must **never** be exposed to the public internet.
 
