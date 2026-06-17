@@ -69,9 +69,9 @@ reads are subject to the target site's visibility.
 
 Governance is a single toggle (`governance.mode`):
 
-- **Trust mode** (default): the quick experience. All sites are open to all employees, there
-  are no owners, and anyone can overwrite anything. The audit log still records every deploy
-  and destructive call.
+- **Trust mode** (default): the zero-friction model. All sites are open to all employees,
+  there are no owners, and anyone can overwrite anything. The audit log still records every
+  deploy and destructive call.
 - **Governed mode**: the first deployer owns the site, visibility can be scoped to groups,
   deletion is restricted, and the admin console exposes audit search, quotas, and usage.
 
