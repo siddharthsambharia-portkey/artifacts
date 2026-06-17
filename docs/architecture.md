@@ -217,7 +217,7 @@ tool and no manual step. Migrations are forward-only with no rollback scripts.
 | `internal/ai` | AI chat and image generation proxy; streams SSE from upstream; enforces `ai_daily_calls_per_user` quota |
 | `internal/warehouse` | Read-only SQL proxy; SELECT guard; dataset allowlist; row-limit enforcement |
 | `internal/files` | File upload and serve HTTP handler; enforces `upload_max_mb`; sets `Content-Disposition: attachment` + restrictive CSP |
-| `internal/notify` | Slack webhook / bot-token notification handler; channel allowlist; `SlackPoster` interface |
+| `internal/notify` | Slack webhook notification handler; channel allowlist; `SlackPoster` interface |
 | `internal/governance` | `Governor`; trust vs governed mode checks (`CanReadSite`, `CanWriteDB`, `IsAdmin`); quota enforcement |
 | `internal/admin` | Admin console HTTP handler: audit log search, usage stats, runtime config snapshot, site visibility management |
 | `internal/ratelimit` | Token-bucket rate-limiter middleware; per-user or per-IP key |

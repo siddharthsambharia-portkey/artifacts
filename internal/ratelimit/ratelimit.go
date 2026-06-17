@@ -48,6 +48,26 @@ func (l *Limiter) Allow(key string) bool {
 	return true
 }
 
+func (l *Limiter) Prune(maxAge time.Duration) int {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	cutoff := time.Now().Add(-maxAge)
+	pruned := 0
+	for key, b := range l.buckets {
+		if b.lastCheck.Before(cutoff) {
+			delete(l.buckets, key)
+			pruned++
+		}
+	}
+	return pruned
+}
+
+func (l *Limiter) BucketCount() int {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	return len(l.buckets)
+}
+
 func Middleware(l *Limiter, keyFn func(*http.Request) string) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

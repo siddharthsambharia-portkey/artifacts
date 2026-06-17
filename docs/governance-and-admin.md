@@ -68,11 +68,10 @@ Each site has a `visibility` setting that controls who can read it:
 In trust mode every site behaves as `public`. In governed mode the default for new sites is
 `public`, but admins can change it via the admin console.
 
-Group membership comes from the `groups` claim in the user's OIDC ID token (configured via
-`oidc.groups_claim`). **Group-scoped visibility requires OIDC auth mode.** In header-trust
-mode, all users have only the `employees` group (see
-[Auth — header-trust](auth-header-trust.md)), so `visibility: group` cannot restrict access
-beyond that.
+Group membership comes from:
+- **OIDC mode** — the `groups` claim in the user's ID token, configured via `oidc.groups_claim`.
+- **Header-trust mode** — the `groups_header` forwarded by the identity proxy (default:
+  `X-Auth-Request-Groups`). See [Auth — header-trust](auth-header-trust.md) for proxy-specific setup.
 
 ### Restricted deletion
 
@@ -126,11 +125,11 @@ The audit log is append-only. Admins can query it via the admin console (see bel
 The admin console lives at `admin.<domain>` (e.g. `https://admin.artifact.corp.example.com`).
 It is gated to users in the `admins` group — a user who is not in `admins` receives 403.
 
-**Current behavior:** admin gating checks the `admins` group from the user's `groups` claim.
-The `groups` claim is populated by OIDC (via `oidc.groups_claim`). In header-trust mode,
-groups are hardcoded to `["employees"]`, so no user can enter the admin console. If you need
-admin access, use OIDC auth mode. See [Auth — header-trust](auth-header-trust.md) for
-details.
+Admin gating checks the `admins` group from the user's groups. In OIDC mode, groups come from
+the `oidc.groups_claim` JWT claim. In header-trust mode, groups come from the `groups_header`
+forwarded by the identity proxy — configure your proxy to include `admins` in that header for
+users who should have admin access. See [Auth — header-trust](auth-header-trust.md) for
+proxy-specific setup.
 
 ### Admin API endpoints
 
@@ -169,8 +168,8 @@ new visibility and groups.
 |---|---|
 | Small team, high trust, want zero friction | Trust |
 | Multiple teams, need to prevent accidental overwrites | Governed |
-| Need per-group data visibility | Governed + OIDC auth |
-| Need admin console access | OIDC auth (any governance mode) |
+| Need per-group data visibility | Governed + OIDC or header-trust with groups header |
+| Need admin console access | Any auth mode with `admins` group forwarded to Artifact |
 | Production deployment at a large company | Governed + OIDC auth |
 
 Even in trust mode, the audit log gives you a full history of deploys and destructive actions

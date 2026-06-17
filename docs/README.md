@@ -29,12 +29,13 @@ minute.
 |---|---|
 | [Configuration](configuration.md) | Every `artifact.yaml` field and environment variable, with defaults |
 | [Self-hosting](self-hosting.md) | Single VM, Docker Compose, Kubernetes/Helm, GCP, AWS |
-| [Auth — Okta](auth-okta.md) | OIDC setup with Okta, step by step |
+| [Auth overview — choosing a mode](auth-overview.md) | Native OIDC vs header-trust, the guaranteed profile, GCP-without-Okta demo path |
+| [Auth — Okta](auth-okta.md) | OIDC setup with Okta, step by step (guaranteed profile) |
 | [Auth — Microsoft Entra ID](auth-entra.md) | OIDC setup with Entra ID (Azure AD) |
 | [Auth — Google Workspace](auth-google.md) | OIDC setup with Google Workspace |
 | [Auth — header-trust (IAP / Pomerium / oauth2-proxy)](auth-header-trust.md) | Run behind an existing identity proxy |
 | [AI gateway](ai-gateway.md) | Wire `artifact.ai` to any OpenAI-compatible upstream |
-| [Warehouse](warehouse.md) | Read-only SQL against BigQuery / Snowflake / Postgres |
+| [Warehouse](warehouse.md) | Read-only SQL against BigQuery / Postgres |
 | [Governance & admin](governance-and-admin.md) | Trust vs governed mode, quotas, audit log, admin console |
 | [Architecture](architecture.md) | How the binary is built — request flow, packages, storage, realtime |
 

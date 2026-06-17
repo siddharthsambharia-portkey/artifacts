@@ -35,7 +35,8 @@ func (h *HeaderTrustAuthenticator) Middleware(next http.Handler) http.Handler {
 		if name == "" {
 			name = strings.Split(email, "@")[0]
 		}
-		u := &User{Email: email, Name: name, Groups: []string{"employees"}}
+		groups := resolveGroups(r, h.cfg.Auth.HeaderTrust.GroupsHeader)
+		u := &User{Email: email, Name: name, Groups: groups}
 		ctx := WithUser(r.Context(), u)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
@@ -43,4 +44,28 @@ func (h *HeaderTrustAuthenticator) Middleware(next http.Handler) http.Handler {
 
 func (h *HeaderTrustAuthenticator) LoginHandler(w http.ResponseWriter, r *http.Request) {
 	http.Error(w, `{"error":"Login is handled by your identity proxy. Access Artifact through your corporate SSO."}`, http.StatusBadRequest)
+}
+
+// resolveGroups reads the configured groups header and splits its comma-separated
+// values into trimmed group names. When no groups header is configured, the header
+// is absent, or it contains no non-empty tokens, it falls back to ["employees"].
+func resolveGroups(r *http.Request, groupsHeader string) []string {
+	if groupsHeader == "" {
+		return []string{"employees"}
+	}
+	raw := r.Header.Get(groupsHeader)
+	if raw == "" {
+		return []string{"employees"}
+	}
+	parts := strings.Split(raw, ",")
+	groups := make([]string, 0, len(parts))
+	for _, p := range parts {
+		if g := strings.TrimSpace(p); g != "" {
+			groups = append(groups, g)
+		}
+	}
+	if len(groups) == 0 {
+		return []string{"employees"}
+	}
+	return groups
 }

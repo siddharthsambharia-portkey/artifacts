@@ -136,6 +136,86 @@ func TestUploadServeRoundtrip(t *testing.T) {
 	}
 }
 
+func TestDeleteFile(t *testing.T) {
+	h, site := setupFilesHandler(t)
+
+	uploadReq := uploadRequest(t, site, "gone.png", []byte("delete me"), "image/png")
+	uploadRec := httptest.NewRecorder()
+	h.Upload(uploadRec, uploadReq)
+	if uploadRec.Code != http.StatusOK {
+		t.Fatalf("upload status %d body %s", uploadRec.Code, uploadRec.Body.String())
+	}
+
+	var up UploadResponse
+	if err := json.Unmarshal(uploadRec.Body.Bytes(), &up); err != nil {
+		t.Fatalf("decode upload response: %v", err)
+	}
+
+	delReq := httptest.NewRequest(http.MethodDelete, "/api/v1/files/"+up.ID, nil)
+	delReq.Host = site + ".localhost"
+	delReq = delReq.WithContext(auth.WithUser(delReq.Context(), &auth.User{Email: "tester@example.com"}))
+	delRec := httptest.NewRecorder()
+	h.Delete(delRec, delReq)
+	if delRec.Code != http.StatusNoContent {
+		t.Fatalf("delete status %d body %s", delRec.Code, delRec.Body.String())
+	}
+
+	serveReq := httptest.NewRequest(http.MethodGet, "/api/v1/files/"+up.ID, nil)
+	serveReq.Host = site + ".localhost"
+	serveReq = serveReq.WithContext(auth.WithUser(serveReq.Context(), &auth.User{Email: "tester@example.com"}))
+	serveRec := httptest.NewRecorder()
+	h.Serve(serveRec, serveReq)
+	if serveRec.Code != http.StatusNotFound {
+		t.Fatalf("serve after delete status %d, want 404", serveRec.Code)
+	}
+}
+
+func TestDeleteFileNotFound(t *testing.T) {
+	h, site := setupFilesHandler(t)
+
+	delReq := httptest.NewRequest(http.MethodDelete, "/api/v1/files/doesnotexist", nil)
+	delReq.Host = site + ".localhost"
+	delReq = delReq.WithContext(auth.WithUser(delReq.Context(), &auth.User{Email: "tester@example.com"}))
+	delRec := httptest.NewRecorder()
+	h.Delete(delRec, delReq)
+	if delRec.Code != http.StatusNotFound {
+		t.Fatalf("delete missing id status %d, want 404", delRec.Code)
+	}
+}
+
+func TestDeleteFileSiteIsolation(t *testing.T) {
+	h, site := setupFilesHandler(t)
+
+	uploadReq := uploadRequest(t, site, "mine.png", []byte("my data"), "image/png")
+	uploadRec := httptest.NewRecorder()
+	h.Upload(uploadRec, uploadReq)
+	if uploadRec.Code != http.StatusOK {
+		t.Fatalf("upload status %d body %s", uploadRec.Code, uploadRec.Body.String())
+	}
+	var up UploadResponse
+	if err := json.Unmarshal(uploadRec.Body.Bytes(), &up); err != nil {
+		t.Fatalf("decode upload response: %v", err)
+	}
+
+	delReq := httptest.NewRequest(http.MethodDelete, "/api/v1/files/"+up.ID, nil)
+	delReq.Host = "othersite.localhost"
+	delReq = delReq.WithContext(auth.WithUser(delReq.Context(), &auth.User{Email: "attacker@example.com"}))
+	delRec := httptest.NewRecorder()
+	h.Delete(delRec, delReq)
+	if delRec.Code != http.StatusNotFound {
+		t.Fatalf("cross-site delete status %d, want 404", delRec.Code)
+	}
+
+	serveReq := httptest.NewRequest(http.MethodGet, "/api/v1/files/"+up.ID, nil)
+	serveReq.Host = site + ".localhost"
+	serveReq = serveReq.WithContext(auth.WithUser(serveReq.Context(), &auth.User{Email: "tester@example.com"}))
+	serveRec := httptest.NewRecorder()
+	h.Serve(serveRec, serveReq)
+	if serveRec.Code != http.StatusOK {
+		t.Fatalf("original file should still exist, serve status %d, want 200", serveRec.Code)
+	}
+}
+
 func TestIsDangerousContentType(t *testing.T) {
 	tests := []struct {
 		name string

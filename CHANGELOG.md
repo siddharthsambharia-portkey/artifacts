@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Removed
+
+- Fake `warehouse.driver: snowflake` alias — it only ever worked with a postgres-compatible DSN and otherwise errored. Advertised warehouse drivers are now exactly `none`, `postgres`, and `bigquery`. Real Snowflake support may return later as an explicit feature (issue 003)
+- Unimplemented `notify.slack.mode: bot` — the handler only ever POSTed to an incoming webhook, so `bot` silently behaved like `webhook`. `notify.slack.mode` now accepts only `off` and `webhook`; `bot` is rejected at config validation. Real Slack bot-token support may return later as an explicit feature (issue 004)
+
 ### Changed
 
 - `db.DB` escape hatch sealed — `*sql.DB` is now a private field; all SQL for `ai_usage`, `uploaded_files`, `audit_log` quota, and sessions is encapsulated behind named domain methods (`CountAIUsageSince`, `ListAIUsageSummary`, `InsertFile`, `ListFiles`, `GetFileByID`, `CountWarehouseQueriesSince`, `InsertSession`, `GetSession`, `DeleteSession`)

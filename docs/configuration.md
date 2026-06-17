@@ -41,6 +41,7 @@ auth:
   header_trust:
     email_header: X-Auth-Request-Email
     name_header: X-Auth-Request-User
+    groups_header: X-Auth-Request-Groups
     proxy_secret_env: ARTIFACT_PROXY_SECRET
 
 storage:
@@ -61,14 +62,14 @@ ai:
   models_allowlist: []
 
 warehouse:
-  driver: none  # bigquery | snowflake | postgres | none
+  driver: none  # bigquery | postgres | none
   credentials_env: ARTIFACT_WAREHOUSE_CREDS
   allowed_datasets: []
   row_limit: 10000
 
 notify:
   slack:
-    mode: off  # webhook | bot | off
+    mode: off  # webhook | off
     secret_env: ARTIFACT_SLACK_SECRET
     channel_allowlist: []
 
@@ -169,8 +170,9 @@ Used when `auth.mode: header-trust`.
 
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
-| `auth.header_trust.email_header` | string | `""` | Request header that carries the authenticated user's email |
-| `auth.header_trust.name_header` | string | `""` | Request header that carries the user's display name |
+| `auth.header_trust.email_header` | string | `"X-Auth-Request-Email"` | Request header that carries the authenticated user's email |
+| `auth.header_trust.name_header` | string | `"X-Auth-Request-User"` | Request header that carries the user's display name. Falls back to the local-part of the email if absent. |
+| `auth.header_trust.groups_header` | string | `"X-Auth-Request-Groups"` | Header carrying a comma-separated list of the user's groups. Falls back to `["employees"]` when absent or empty. |
 | `auth.header_trust.proxy_secret_env` | string | `""` | **Required.** Name of the env var holding the shared secret Artifact uses to verify the proxy's `X-Artifact-Proxy-Auth` header |
 
 `proxy_secret_env` must be set in config, and the env var it names must be present at
@@ -244,8 +246,8 @@ Read-only SQL proxy. Queries are SELECT-only; the server enforces an allowlist a
 
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
-| `warehouse.driver` | string | `"none"` | `bigquery` \| `snowflake` \| `postgres` \| `none` |
-| `warehouse.credentials_env` | string | `""` | Name of the env var holding credentials (JSON service account for BigQuery; DSN for Snowflake/Postgres) |
+| `warehouse.driver` | string | `"none"` | `bigquery` \| `postgres` \| `none` |
+| `warehouse.credentials_env` | string | `""` | Name of the env var holding credentials (ADC for BigQuery; DSN for Postgres) |
 | `warehouse.allowed_datasets` | []string | `[]` | Dataset/schema allowlist. Empty = allow any dataset |
 | `warehouse.row_limit` | int | `10000` | Hard row cap per query |
 
@@ -260,9 +262,9 @@ Server-side Slack integration for `artifact.notify.slack()`.
 
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
-| `notify.slack.mode` | string | `"off"` | `webhook` (incoming webhook URL) \| `bot` (bot token) \| `off` |
-| `notify.slack.secret_env` | string | `""` | Name of the env var holding the webhook URL or bot token |
-| `notify.slack.channel_allowlist` | []string | `[]` | Channels sites are permitted to post to. Empty = all channels allowed |
+| `notify.slack.mode` | string | `"off"` | `webhook` (incoming webhook URL) \| `off` |
+| `notify.slack.secret_env` | string | `""` | Name of the env var holding the incoming webhook URL |
+| `notify.slack.channel_allowlist` | []string | `[]` | Channels sites are permitted to post to. Empty = all channels allowed. Note: a classic incoming webhook posts to the single channel the webhook was created for; the allowlist gates requests but does not reroute delivery |
 
 ---
 

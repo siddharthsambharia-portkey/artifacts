@@ -143,6 +143,7 @@ func (s *Server) routes() http.Handler {
 			r.Get("/api/v1/files", fileHandler.List)
 			r.Post("/api/v1/files", fileHandler.Upload)
 			r.Get("/api/v1/files/{id}", fileHandler.Serve)
+			r.Delete("/api/v1/files/{id}", fileHandler.Delete)
 			r.With(ratelimit.Middleware(aiLimiter, rateKey)).Post("/api/v1/ai/chat", aiHandler.Chat)
 			r.With(ratelimit.Middleware(aiLimiter, rateKey)).Post("/api/v1/ai/image", aiHandler.Image)
 			if whHandler != nil {

@@ -158,6 +158,35 @@ func (h *Handler) Serve(w http.ResponseWriter, r *http.Request) {
 	io.Copy(w, rc)
 }
 
+func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
+	id := r.URL.Query().Get("id")
+	if id == "" {
+		parts := strings.Split(strings.TrimPrefix(r.URL.Path, "/api/v1/files/"), "/")
+		if len(parts) > 0 && parts[0] != "" {
+			id = parts[0]
+		}
+	}
+	if id == "" {
+		http.NotFound(w, r)
+		return
+	}
+	site := h.cfg.SiteFromHost(r.Host)
+	rec, err := h.db.GetFileByID(r.Context(), site, id)
+	if err != nil || rec == nil {
+		http.NotFound(w, r)
+		return
+	}
+	if err := h.store.Delete(r.Context(), rec.StoragePath); err != nil {
+		http.Error(w, fmt.Sprintf(`{"error":"Delete failed: %v"}`, err), http.StatusInternalServerError)
+		return
+	}
+	if err := h.db.DeleteFile(r.Context(), site, id); err != nil {
+		http.Error(w, fmt.Sprintf(`{"error":"Delete failed: %v"}`, err), http.StatusInternalServerError)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
 func isDangerousContentType(ct string) bool {
 	dangerous := []string{"text/html", "application/javascript", "text/javascript", "application/xhtml+xml"}
 	for _, d := range dangerous {

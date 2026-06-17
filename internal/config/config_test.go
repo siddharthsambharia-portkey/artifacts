@@ -37,3 +37,24 @@ func TestValidSiteName(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestSlackModeValidation(t *testing.T) {
+	tests := []struct {
+		mode    string
+		wantErr bool
+	}{
+		{"off", false},
+		{"webhook", false},
+		{"", false},
+		{"bot", true},
+		{"channel", true},
+	}
+	for _, tt := range tests {
+		cfg := DefaultDev()
+		cfg.Notify.Slack.Mode = tt.mode
+		err := cfg.Validate()
+		if (err != nil) != tt.wantErr {
+			t.Errorf("Validate() with slack mode %q: err = %v, wantErr %v", tt.mode, err, tt.wantErr)
+		}
+	}
+}

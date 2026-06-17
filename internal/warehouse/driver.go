@@ -25,8 +25,6 @@ func NewQuerier(cfg WarehouseConfig) (Querier, error) {
 		return newPostgresQuerier(creds)
 	case "bigquery":
 		return newBigQueryQuerier(cfg)
-	case "snowflake":
-		return newSnowflakeQuerier(cfg)
 	default:
 		return nil, fmt.Errorf("unknown warehouse driver %q", cfg.WarehouseDriver())
 	}

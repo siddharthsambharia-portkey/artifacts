@@ -2,7 +2,7 @@ branding:
   name: Artifact
   logo: ""
 
-domain: artifact.corp.example.com
+domain: lvh.me
 listen: ":8443"
 
 tls:
@@ -38,14 +38,14 @@ ai:
   models_allowlist: []
 
 warehouse:
-  driver: none  # bigquery | snowflake | postgres | none
+  driver: none  # bigquery | postgres | none
   credentials_env: ARTIFACT_WAREHOUSE_CREDS
   allowed_datasets: []
   row_limit: 10000
 
 notify:
   slack:
-    mode: off  # webhook | bot | off
+    mode: off  # webhook | off
     secret_env: ARTIFACT_SLACK_SECRET
     channel_allowlist: []
 

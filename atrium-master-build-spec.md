@@ -18,7 +18,7 @@ Drop a folder of HTML into your company's trust bubble → get `mysite.artifact.
 - [x] `artifact.files` — file uploads with served URLs
 - [x] `artifact.ai.chat` — streaming LLM calls, keys server-side
 - [x] `artifact.ai.image` — image generation passthrough
-- [x] `artifact.warehouse.query` — read-only SQL against BigQuery/Snowflake/Postgres replicas
+- [x] `artifact.warehouse.query` — read-only SQL against BigQuery/Postgres replicas
 - [x] `artifact.ws` — websocket rooms, presence, multiplayer
 - [x] `artifact.me` — identity API (name, email, title, team, Slack handle, avatar, groups)
 - [x] `artifact.notify.slack` — post messages to Slack via server-held webhook/token
@@ -42,8 +42,8 @@ No per-site custom backends, no cron, no server-side functions, no build pipelin
                         ├─ static serving ◀── object store (s3|gcs|minio|local)
                         ├─ /api/v1/* ◀──── Postgres (or SQLite in dev)
                         ├─ /api/v1/ai/* ─▶ OpenAI-compatible upstream (gateway)
-                        ├─ /api/v1/warehouse ─▶ BigQuery|Snowflake|Postgres (read-only creds)
-                        ├─ /api/v1/notify ─▶ Slack webhook/token (server-held)
+                        ├─ /api/v1/warehouse ─▶ BigQuery|Postgres (read-only creds)
+                        ├─ /api/v1/notify ─▶ Slack webhook (server-held)
                         └─ /ws ── in-process hub (NATS adapter optional for multi-replica)
 ```
 
@@ -93,13 +93,13 @@ ai:
   models_allowlist: []
 
 warehouse:
-  driver: bigquery|snowflake|postgres|none      # READ-ONLY credentials only
+  driver: bigquery|postgres|none                # READ-ONLY credentials only
   credentials_env: ARTIFACT_WAREHOUSE_CREDS
   allowed_datasets: []                          # empty = deny all; explicit allowlist required
   row_limit: 10000
 
 notify:
-  slack: { mode: webhook|bot|off, secret_env: ARTIFACT_SLACK_SECRET, channel_allowlist: [] }
+  slack: { mode: webhook|off, secret_env: ARTIFACT_SLACK_SECRET, channel_allowlist: [] }
 
 governance:
   mode: trust | governed                        # THE toggle
@@ -199,7 +199,7 @@ DevEx acceptance bar (enforced by e2e tests in CI):
 5. **SDK core: identity, db, kv, files.** Handlers + artifact.js + types. Quotas + rate limits + friendly errors. ✔ guestbook example fully works with zero site config.
 6. **Realtime.** WS hub, rooms, presence, db subscribe wired to write-path events, SDK auto-reconnect/replay. ✔ multiplayer-cursors example: two browsers see each other.
 7. **AI.** Streaming chat passthrough + image gen + usage rows + per-user quota. ✔ works against any OpenAI-compatible endpoint (test with a stub server).
-8. **Warehouse + notify.** SELECT-only query API with allowlist; Slack webhook/bot notify with channel allowlist. ✔ team-dashboard example pulls warehouse rows; lunch-vote pings Slack.
+8. **Warehouse + notify.** SELECT-only query API with allowlist; Slack webhook notify with channel allowlist. ✔ team-dashboard example pulls warehouse rows; lunch-vote pings Slack.
 9. **Home + admin.** Apex site directory (search, recent deploys) built as a static Artifact site using the SDK (dogfood). Admin console with audit search, quotas, usage, mode toggle. ✔ flipping to governed mode enforces ownership live, nothing breaks.
 10. **MCP server.** `artifact mcp` stdio with deploy/list/logs/db tools. ✔ Claude Code can ship a site end-to-end.
 11. **Packaging.** Dockerfile (distroless), docker-compose (artifact+postgres+minio), Helm chart (external pg/s3 values, ingress examples, 2-replica + NATS values), Terraform examples (GCP: GCS+CloudSQL+ILB; AWS: S3+RDS+ALB), `install.sh`, goreleaser (darwin/linux, amd64/arm64), Homebrew tap formula. ✔ `docker compose up` quickstart green; `helm install` on kind + minio passes e2e.

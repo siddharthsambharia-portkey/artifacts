@@ -1,7 +1,7 @@
 # Warehouse
 
 `artifact.warehouse` gives every internal site read-only access to your company's analytics
-data (BigQuery, Snowflake, or Postgres) from the browser. The connection, credentials, and
+data (BigQuery or Postgres) from the browser. The connection, credentials, and
 query constraints live entirely on the server. Sites submit a SQL `SELECT` and get back rows.
 They cannot modify data, access datasets outside the allowlist, or exceed the row or daily
 limits you configure.
@@ -14,7 +14,7 @@ browser  →  POST /api/v1/warehouse/query  →  Artifact
                                                 │  checks dataset allowlist
                                                 │  enforces row limit
                                                 ▼
-                                        BigQuery / Snowflake / Postgres
+                                        BigQuery / Postgres
                                          (read-only credentials)
 ```
 
@@ -29,16 +29,16 @@ Artifact enforces three independent defenses before any SQL reaches the database
 3. **Row limit** — results are capped at `row_limit` rows. If your query has no `LIMIT`
    clause, Artifact appends one automatically.
 
-Use read-only database credentials — a read-only user, a service account with
-`roles/bigquery.dataViewer`, or a Snowflake role with only `SELECT` grants. The parser is a
-secondary defense, not a replacement for proper credential scoping.
+Use read-only database credentials — a read-only user or a service account with
+`roles/bigquery.dataViewer`. The parser is a secondary defense, not a replacement for
+proper credential scoping.
 
 ## Configuration
 
 ```yaml
 # artifact.yaml
 warehouse:
-  driver: bigquery               # bigquery | snowflake | postgres | none (default)
+  driver: bigquery               # bigquery | postgres | none (default)
   credentials_env: ARTIFACT_WAREHOUSE_CREDS  # name of env var holding credentials
   allowed_datasets:
     - analytics.events
@@ -88,25 +88,6 @@ warehouse:
 
 The BigQuery service account needs `roles/bigquery.dataViewer` on the datasets you list in
 `allowed_datasets`.
-
-### Snowflake
-
-The Snowflake driver accepts a **postgres-compatible DSN** via `credentials_env`:
-
-```bash
-ARTIFACT_WAREHOUSE_CREDS=postgres://my_user:my_password@my_account.snowflakecomputing.com/my_db
-```
-
-```yaml
-warehouse:
-  driver: snowflake
-  credentials_env: ARTIFACT_WAREHOUSE_CREDS
-  allowed_datasets:
-    - ANALYTICS.PUBLIC.EVENTS
-  row_limit: 10000
-```
-
-Use a Snowflake role that has only `SELECT` privileges on the datasets in `allowed_datasets`.
 
 ### Postgres
 

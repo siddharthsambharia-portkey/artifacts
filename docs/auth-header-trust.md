@@ -41,6 +41,7 @@ auth:
   header_trust:
     email_header: X-Auth-Request-Email    # default; header the proxy sends with the user's email
     name_header: X-Auth-Request-User      # default; header with the user's display name (optional)
+    groups_header: X-Auth-Request-Groups  # default; comma-separated groups forwarded by the proxy
     proxy_secret_env: ARTIFACT_PROXY_SECRET  # name of the env var holding the shared secret
 ```
 
@@ -48,6 +49,7 @@ auth:
 |---|---|---|
 | `email_header` | `X-Auth-Request-Email` | Header the proxy sends with the authenticated user's email. Required. |
 | `name_header` | `X-Auth-Request-User` | Header with the user's display name. If missing or empty, Artifact falls back to the local-part of the email. |
+| `groups_header` | `X-Auth-Request-Groups` | Header carrying a comma-separated list of groups the proxy assigns to the user. If absent or empty, falls back to `["employees"]`. |
 | `proxy_secret_env` | *(none)* | Name of the environment variable that holds the shared secret. **Must be set.** |
 
 The actual secret value goes in the environment variable named by `proxy_secret_env`, not
@@ -94,26 +96,25 @@ header-trust mode requires proxy_secret_env in config — Artifact refuses to bo
 
 add `proxy_secret_env: ARTIFACT_PROXY_SECRET` (or your chosen name) to `artifact.yaml`.
 
-## Current limitation — groups are hardcoded to `["employees"]`
+## Groups and admin access
 
-**Current behavior:** in header-trust mode, every authenticated user is assigned the group
-`employees` regardless of what the identity proxy knows about group membership. There is no
-way to pass groups via a header today.
+Artifact reads the user's groups from the header named by `groups_header` (default:
+`X-Auth-Request-Groups`). The header value is a comma-separated list of group names:
 
-Practical consequences:
+```
+X-Auth-Request-Groups: admins,employees
+```
 
-- No user will be in the `admins` group, so the admin console at `admin.<domain>` will be
-  inaccessible (all requests return 403).
-- Governed-mode group-scoped visibility (`visibility: group`) cannot be used — no user will
-  match a non-employee group.
+Artifact splits, trims, and stamps those groups onto the signed-in user. The groups are
+then used for:
 
-**If you need admin access or group-scoped visibility**, use OIDC mode instead (see
-[Auth — Okta](auth-okta.md), [Auth — Entra ID](auth-entra.md), or
-[Auth — Google Workspace](auth-google.md)). OIDC mode reads group membership from the ID
-token's `groups_claim`, which makes admin gating work correctly.
+- **Admin console gating** — users in the `admins` group can reach `admin.<domain>`.
+- **Governed-mode group-scoped visibility** — sites with `visibility: group` check whether
+  the requesting user is in the specified groups.
 
-This limitation is tracked in the backlog and will be resolved when a configurable
-groups header is added to the header-trust authenticator.
+If the header is absent or empty, Artifact falls back to `["employees"]`, keeping all
+authenticated users in the default employee group and preventing lockout in deployments
+where groups are not yet configured.
 
 ## Proxy-specific setup
 
@@ -130,33 +131,41 @@ auth:
   header_trust:
     email_header: X-Pomerium-Claim-Email
     name_header: X-Pomerium-Claim-Name
+    groups_header: X-Pomerium-Claim-Groups
     proxy_secret_env: ARTIFACT_PROXY_SECRET
 ```
 
 Configure Pomerium to send `X-Artifact-Proxy-Auth: <secret>` on every forwarded request and
-set `ARTIFACT_PROXY_SECRET` to the same value in Artifact's environment.
+set `ARTIFACT_PROXY_SECRET` to the same value in Artifact's environment. Pomerium forwards
+the `groups` claim from the identity provider as `X-Pomerium-Claim-Groups` when the IdP
+includes it in the token.
 
 ### oauth2-proxy
 
 oauth2-proxy forwards user identity in `X-Auth-Request-Email` and `X-Auth-Request-User` by
-default, which match Artifact's defaults. The only required config change is adding the
-proxy-auth header:
+default, which match Artifact's defaults. To also forward groups, enable `set_xauthrequest`
+and add the `groups` scope:
 
 ```yaml
-# artifact.yaml — oauth2-proxy defaults already match; just add:
+# artifact.yaml — oauth2-proxy defaults already match email/name/groups headers:
 auth:
   mode: header-trust
   header_trust:
     proxy_secret_env: ARTIFACT_PROXY_SECRET
 ```
 
-In `oauth2-proxy.cfg`, inject the shared secret:
+In `oauth2-proxy.cfg`:
 
 ```ini
 # oauth2-proxy.cfg
-set_xauthrequest = true
+set_xauthrequest = true          # emits X-Auth-Request-Email, X-Auth-Request-User, X-Auth-Request-Groups
+scope = openid email profile groups
 pass_request_headers = X-Artifact-Proxy-Auth=changeme-proxy-shared-secret
 ```
+
+With `set_xauthrequest = true` and the `groups` scope, oauth2-proxy populates
+`X-Auth-Request-Groups` with a comma-separated list of the user's IdP groups. Artifact
+reads that header automatically with its default `groups_header` setting.
 
 ### Google Cloud IAP
 
@@ -221,6 +230,6 @@ After deploying, verify the following:
 - [ ] **Request with the proxy-auth header but no email header is rejected.** Send with
   `X-Artifact-Proxy-Auth` set but omit the email header and confirm a 401.
 
-- [ ] **Admin console returns 403 for all users** (expected until groups support is added).
-  Visit `https://admin.artifact.corp.example.com` and confirm the 403 response — this is
-  correct behavior in header-trust mode.
+- [ ] **Admin console is reachable for admins-group users.** Sign in through the proxy as a
+  user whose groups header includes `admins` and confirm `https://admin.artifact.corp.example.com`
+  loads. A user whose groups header does not include `admins` should receive a 403.

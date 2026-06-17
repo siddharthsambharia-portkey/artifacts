@@ -176,7 +176,7 @@ room.presence.subscribe((users) => console.log('online:', users));
 await artifact.notify.slack('#team-channel', 'Deploy is live!');
 ```
 
-Posts via a server-held webhook or bot token. Requires `notify.slack.mode` configured on the server.
+Posts via a server-held incoming webhook. Requires `notify.slack.mode: webhook` configured on the server.
 
 ---
 

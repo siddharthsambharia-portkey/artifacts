@@ -48,6 +48,7 @@ type OIDC struct {
 type HeaderTrust struct {
 	EmailHeader    string `yaml:"email_header"`
 	NameHeader     string `yaml:"name_header"`
+	GroupsHeader   string `yaml:"groups_header"`
 	ProxySecretEnv string `yaml:"proxy_secret_env"`
 }
 
@@ -203,6 +204,13 @@ func (c *Config) Validate() error {
 	}
 	if c.Governance.Mode != "trust" && c.Governance.Mode != "governed" {
 		return fmt.Errorf("invalid governance.mode %q: use trust or governed", c.Governance.Mode)
+	}
+	switch c.Notify.Slack.Mode {
+	case "", "off", "webhook":
+	case "bot":
+		return fmt.Errorf("invalid notify.slack.mode %q: bot-token Slack is not implemented — use webhook (incoming webhook URL) or off", c.Notify.Slack.Mode)
+	default:
+		return fmt.Errorf("invalid notify.slack.mode %q: use webhook or off", c.Notify.Slack.Mode)
 	}
 	return nil
 }

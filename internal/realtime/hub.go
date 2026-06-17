@@ -69,6 +69,12 @@ func (h *Hub) SetNATS(nc *nats.Conn) {
 	}
 }
 
+func (h *Hub) RoomCount() int {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+	return len(h.rooms)
+}
+
 func (h *Hub) getRoom(name string) *Room {
 	h.mu.Lock()
 	defer h.mu.Unlock()
@@ -197,10 +203,22 @@ func (c *Client) sendPresence() {
 }
 
 func (c *Client) close() {
-	room := c.hub.getRoom(c.site + ":" + c.room)
+	roomKey := c.site + ":" + c.room
+	room := c.hub.getRoom(roomKey)
 	room.mu.Lock()
 	delete(room.clients, c)
+	empty := len(room.clients) == 0
 	room.mu.Unlock()
-	c.conn.Close(websocket.StatusNormalClosure, "")
+	if empty {
+		c.hub.mu.Lock()
+		// Double-check still empty under hub lock (another goroutine could have joined)
+		if r, ok := c.hub.rooms[roomKey]; ok && len(r.clients) == 0 {
+			delete(c.hub.rooms, roomKey)
+		}
+		c.hub.mu.Unlock()
+	}
+	if c.conn != nil {
+		c.conn.Close(websocket.StatusNormalClosure, "")
+	}
 	close(c.send)
 }

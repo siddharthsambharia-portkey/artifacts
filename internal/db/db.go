@@ -310,6 +310,12 @@ func (d *DB) GetFileByID(ctx context.Context, site, id string) (*FileRecord, err
 	return &f, nil
 }
 
+func (d *DB) DeleteFile(ctx context.Context, site, id string) error {
+	_, err := d.db.ExecContext(ctx,
+		"DELETE FROM uploaded_files WHERE id=? AND site=?", id, site)
+	return shimExec(err, d.driver)
+}
+
 func (d *DB) InsertSession(ctx context.Context, id, email, name, groupsJSON string, expiresAt time.Time) error {
 	_, err := d.db.ExecContext(ctx,
 		`INSERT INTO sessions (id, email, name, groups_json, expires_at) VALUES (?, ?, ?, ?, ?)`,

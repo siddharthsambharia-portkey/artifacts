@@ -5,7 +5,8 @@ Execute in the order below unless dependencies say otherwise. Each executor:
 read the plan fully before starting, honor its STOP conditions, and update
 your row when done.
 
-Last reconciled: 2026-06-15 at `489308a` (architecture deepening sprint, PRs #27–#35).
+Last reconciled: 2026-06-17 (TDD sprint — backlog items resolved, see section below).
+Previous: 2026-06-15 at `489308a` (architecture deepening sprint, PRs #27–#35).
 Statuses below are verified against the code by probe, not by self-declaration —
 see plan 011 for the probe matrix. All of 001–011 are DONE on `main`; full suite
 passes with `-race`.
@@ -81,21 +82,29 @@ files). Execute blockers first.
 | docs-09 | Operator/platform agent pair (root `AGENTS.md`+`CLAUDE.md`) | P1 | M | AFK | docs-03 (soft) | DONE |
 | docs-10 | README documentation section + fix broken doc links | P2 | S | AFK | docs-02, docs-04 | TODO |
 
-> docs-02 is IN PROGRESS: `docs/README.md`, `docs/quickstart.md`, `docs/concepts.md`, and
-> `docs/sdk-reference.md` are already drafted; `docs/cli-reference.md` and `docs/faq.md`
-> remain.
+## TDD sprint (2026-06-17)
+
+Four backlog items resolved via strict red→green TDD (one test per tracer bullet). All tests
+pass with `-race`; `go build ./...` and `go vet ./...` clean.
+
+| Slice | What shipped |
+|-------|-------------|
+| `artifact.files.delete(id)` | `db.DeleteFile` + `Handler.Delete` + `DELETE /api/v1/files/{id}` route; 3 tests (happy path, not found, site isolation) |
+| Realtime hub room cleanup | `client.close()` now removes empty rooms under a double-checked hub lock; nil-conn guard added; `Hub.RoomCount()` testability accessor; 3 tests |
+| Ratelimit `Prune` | `Limiter.Prune(maxAge) int` + `BucketCount() int` added; 4 tests (stale pruned, active kept, mixed, empty-safe) |
+| Header-trust configurable groups | `resolveGroups` helper reads `cfg.Auth.HeaderTrust.GroupsHeader`, comma-splits/trims, falls back to `["employees"]`; 7 tests; `docs/auth-header-trust.md` updated |
 
 ## Backlog (audited, real, not yet planned)
 
 - **CLI deploy bypasses the server entirely** (`internal/cli/deploy.go:30-57` opens storage+DB directly and deploys as the hardcoded `auth.DevUser`): remote Builders can't deploy without bucket credentials, and governed-mode ownership is meaningless via CLI (every site is owned by `dev@localhost`). The server endpoint half **landed in plan 008** (`POST /api/v1/deploy`, verified at `cd7b16c`); remaining and still unplanned: pointing the CLI/MCP at that endpoint as authenticated clients (how does the CLI authenticate? device flow / token) (L effort, auth design needed).
-- **Header-trust mode hardcodes `Groups: ["employees"]`** (`internal/auth/header_trust.go:38`): no admins and no group-scoped visibility possible in the enterprise auth mode. Needs a configurable groups header. S/M.
+- ~~**Header-trust mode hardcodes `Groups: ["employees"]`**: resolved — `auth.header_trust.groups_header` (default `X-Auth-Request-Groups`) reads comma-separated groups from the proxy, with `["employees"]` fallback. `docs/auth-header-trust.md` fully documents the feature. Issue 001 closed.~~
 - **CSRF hardening for governed mode**: `SameSite=Lax` blocks external sites, but sibling subdomains are same-site; a malicious deployed site can fire simple-content-type POSTs as the visiting owner. M effort (token via `/api/v1/me`, SDK attaches header).
-- **Realtime hub hygiene**: empty rooms never removed from `hub.rooms`, `events` channel never closed, write errors ignored in `writePump`, rate-limiter bucket map never pruned. S each, bundle as one cleanup PR.
+- **Realtime hub hygiene** (partial): ~~empty rooms never removed from `hub.rooms`~~ (fixed 2026-06-17), ~~rate-limiter bucket map never pruned~~ (`Prune` method added 2026-06-17); remaining: `events` channel never closed on hub shutdown, write errors silently ignored in `writePump`. S each.
 - **Static serving perf**: LocalStore computes an MD5 of the whole file on every `Get` (`internal/storage/local.go:69-71`) and the `If-None-Match` check runs *after* fetching the object (`internal/sites/serve.go:65`). S/M.
 - **CI/supply chain**: add `govulncheck` job, dependabot config (gomod + sdk npm), fix `release.yml` pinning Go 1.23 while go.mod requires 1.25.8, add `-coverprofile` + upload. All S.
 - **DX/docs**: a config reference for every `artifact.yaml` field (M-effort writing task, still unplanned). The rest of this bullet — repo-level CLAUDE.md, the `docs/faq.md` "not a fit" examples, the `artifact.kv` README row, and `.env.example` — was resolved by **plan 011** at `cd7b16c`.
 - **Repo hygiene**: stale `.atrium-data/` dir and `bin/atrium` binary (pre-rename leftovers, untracked — delete); `artifact-master-build-spec.md` tracked with mode 600 while its siblings are gitignored (decide and align); `lessons/`/`learning-records/`/`reference/` untracked and not gitignored.
-- **Direction (from the audit, grounded in the build spec)**: CLI `delete`/`rollback` (manifest-pointer architecture already supports rollback); collaborators + ownership transfer for governed mode (spec promises "departed-employee site transfer"); MCP tools for site inspection/cleanup (`get_site_info`, `delete_site`, `read_deployed_file`); `artifact.files.delete(id)` for upload/delete symmetry.
+- **Direction (from the audit, grounded in the build spec)**: CLI `delete`/`rollback` (manifest-pointer architecture already supports rollback); collaborators + ownership transfer for governed mode (spec promises "departed-employee site transfer"); MCP tools for site inspection/cleanup (`get_site_info`, `delete_site`, `read_deployed_file`); ~~`artifact.files.delete(id)` for upload/delete symmetry~~ (shipped 2026-06-17).
 
 ## Findings considered and rejected
 

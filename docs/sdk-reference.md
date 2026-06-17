@@ -161,9 +161,9 @@ Backed by the realtime hub at `/ws`. The same hub delivers `db.subscribe` events
 await artifact.notify.slack('#team-deploys', 'Lunch poll is live 🎉');
 ```
 
-Posts via a server-held webhook or bot token. Channels are restricted to a server-side
+Posts via a server-held incoming webhook. Channels are restricted to a server-side
 allowlist and rate-limited per user. HTTP: `POST /api/v1/notify/slack`. Requires Slack to be
-configured (`notify.slack.mode`).
+configured (`notify.slack.mode: webhook`).
 
 ---
 

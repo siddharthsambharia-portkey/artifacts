@@ -51,7 +51,7 @@ Loading `<script src="/artifact.js"></script>` gives every site the same backend
 | `artifact.kv` | Per-site key/value | Postgres or SQLite |
 | `artifact.files` | Uploads with served URLs | object storage |
 | `artifact.ai` | Streaming chat + image generation | your AI gateway (keys server-side) |
-| `artifact.warehouse` | Read-only SQL | BigQuery / Snowflake / Postgres |
+| `artifact.warehouse` | Read-only SQL | BigQuery / Postgres |
 | `artifact.ws` | Rooms, messages, presence | in-process hub (NATS optional) |
 | `artifact.notify` | Slack messages | server-held webhook/token |
 
