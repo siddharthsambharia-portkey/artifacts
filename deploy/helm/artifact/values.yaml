@@ -13,34 +13,100 @@ ingress:
   enabled: true
   className: nginx
   annotations: {}
+  # For wildcard subdomain routing, add a *.domain entry here in addition to the apex host.
+  # nginx-ingress supports wildcard host values natively.
   hosts:
     - host: artifact.corp.example.com
       paths:
         - path: /
           pathType: Prefix
+  # TLS entries referencing the cert-manager-managed secret.
+  # When certificate.enabled=true the secret name defaults to <release>-wildcard-tls;
+  # set certificate.secretName and mirror it here.
   tls: []
+
+# Kubernetes ServiceAccount for the pod.
+# Set annotations["iam.gke.io/gcp-service-account"] for Workload Identity on GKE;
+# the pod then reads GCS via Application Default Credentials with no JSON key mounted.
+serviceAccount:
+  create: true
+  # Override the name; defaults to <release>-artifact
+  name: ""
+  annotations: {}
+  # Must be true on GKE for Workload Identity token projection to work
+  automountServiceAccountToken: false
 
 config:
   domain: artifact.corp.example.com
   auth:
-    mode: oidc
+    mode: oidc   # oidc | header-trust | dev
+    oidc:
+      issuer: ""
+      clientId: ""
+      # Name of the env var the binary reads for the OIDC client secret
+      # (value is supplied via oidcSecret.secretName / secretKey below)
+      clientSecretEnv: ARTIFACT_OIDC_SECRET
+    headerTrust:
+      emailHeader: X-Auth-Request-Email
+      nameHeader: X-Auth-Request-Name
+      groupsHeader: X-Auth-Request-Groups
+      # Env var name the binary reads for the proxy shared secret
+      # (value is supplied via headerTrustSecret.secretName / secretKey below)
+      proxySecretEnv: ARTIFACT_PROXY_SECRET
   storage:
-    driver: s3
+    driver: s3      # s3 | gcs | local
     bucket: artifact-sites
-    endpoint: minio.minio.svc:9000
+    endpoint: ""    # S3/MinIO only; leave blank for real AWS S3 or gcs
   database:
     driver: postgres
   governance:
     mode: trust
 
+# External Postgres DSN.
+# Supply via url (plaintext — avoid in production) or reference a pre-existing
+# Kubernetes Secret with secretName + secretKey (recommended for production).
 externalDatabase:
   enabled: true
-  url: postgres://artifact:secret@postgres:5432/artifact
+  url: "postgres://artifact:secret@postgres:5432/artifact"
+  secretName: ""
+  secretKey: database-url
 
+# S3 / MinIO credentials — only used when config.storage.driver is "s3".
+# secretKey value comes from a Kubernetes Secret (secretName / secretKey) when
+# secretName is set; otherwise falls back to the legacy <release>-s3 secret.
 externalS3:
   enabled: true
   accessKey: ""
-  secretKey: ""
+  secretName: ""
+  secretKey: secretKey
+
+# Kubernetes Secret that supplies the proxy shared secret for header-trust auth.
+# The value is injected as the env var named in config.auth.headerTrust.proxySecretEnv.
+# Create with: kubectl create secret generic <name> --from-literal=<key>=<secret>
+headerTrustSecret:
+  secretName: ""
+  secretKey: proxy-secret
+
+# Kubernetes Secret that supplies the OIDC client secret for native OIDC.
+# The value is injected as the env var named in config.auth.oidc.clientSecretEnv.
+# Create with: kubectl create secret generic <name> --from-literal=<key>=<secret>
+oidcSecret:
+  secretName: ""
+  secretKey: client-secret
+
+# cert-manager Certificate for *.<domain> + apex.
+# DNS-01 is required for wildcard certs — HTTP-01 cannot issue *.
+# Off by default; cert-manager CRDs are not assumed to be present.
+# Enable with: --set certificate.enabled=true
+# See deploy/recipes/wildcard-tls-gcp.md for the ClusterIssuer and full walkthrough.
+certificate:
+  enabled: false
+  # Name of the cert-manager ClusterIssuer using a DNS-01 solver.
+  # For the GCP profile use the Cloud DNS ClusterIssuer from the recipe.
+  clusterIssuer: letsencrypt-dns01
+  # Kubernetes Secret name cert-manager writes and the Ingress TLS block references.
+  # Defaults to <release>-wildcard-tls when blank.
+  secretName: ""
 
 nats:
   enabled: false

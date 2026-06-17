@@ -1,0 +1,109 @@
+# GCP + Okta deployment profile (guaranteed profile — see docs/adr/0001)
+#
+# Feed terraform outputs into this file before running helm install:
+#   BUCKET=$(terraform output -raw storage_bucket)
+#   CONN=$(terraform output -raw cloudsql_connection_name)
+#   WI_SA=$(terraform output -raw workload_identity_sa_email)
+#
+# Then install:
+#   helm install artifact ./deploy/helm/artifact/ -f deploy/helm/artifact/values-gcp.yaml \
+#     --set config.storage.bucket="$BUCKET" \
+#     --set serviceAccount.annotations."iam\.gke\.io/gcp-service-account"="$WI_SA"
+#
+# Pre-create secrets before helm install:
+#   kubectl create secret generic artifact-db \
+#     --from-literal=database-url="postgres://artifact:<pw>@/artifact?host=/cloudsql/$CONN"
+#   kubectl create secret generic artifact-oidc \
+#     --from-literal=client-secret=<your-okta-client-secret>
+
+config:
+  domain: artifact.corp.example.com
+
+  auth:
+    mode: oidc
+    oidc:
+      issuer: https://corp.okta.com
+      clientId: 0oa_your_client_id
+      clientSecretEnv: ARTIFACT_OIDC_SECRET
+
+  storage:
+    driver: gcs
+    bucket: artifact-sites-prod   # override with terraform output storage_bucket
+
+  database:
+    driver: postgres
+
+  governance:
+    mode: governed
+
+# Workload Identity: the K8s ServiceAccount is annotated with the GCP SA email so the
+# pod reads GCS via Application Default Credentials — no JSON key file is needed.
+# automountServiceAccountToken must be true for WI token projection to work on GKE.
+serviceAccount:
+  create: true
+  annotations:
+    iam.gke.io/gcp-service-account: artifact@my-corp-project.iam.gserviceaccount.com
+  automountServiceAccountToken: true
+
+# Cloud SQL Postgres DSN stored in a pre-existing Kubernetes Secret.
+externalDatabase:
+  enabled: true
+  secretName: artifact-db
+  secretKey: database-url
+
+# GCS uses Workload Identity — no S3 access keys required.
+externalS3:
+  enabled: false
+
+# OIDC client secret from a pre-existing Kubernetes Secret.
+oidcSecret:
+  secretName: artifact-oidc
+  secretKey: client-secret
+
+# --- header-trust alternative (uncomment to switch from native OIDC) ---
+# Use this if running behind oauth2-proxy, Pomerium, or Google IAP instead of
+# having Artifact run the OIDC flow itself.  Pre-create the proxy secret:
+#   kubectl create secret generic artifact-proxy \
+#     --from-literal=proxy-secret=<your-proxy-shared-secret>
+#
+# config:
+#   auth:
+#     mode: header-trust
+#     headerTrust:
+#       emailHeader: X-Auth-Request-Email
+#       nameHeader: X-Auth-Request-Name
+#       groupsHeader: X-Auth-Request-Groups
+#       proxySecretEnv: ARTIFACT_PROXY_SECRET
+#
+# headerTrustSecret:
+#   secretName: artifact-proxy
+#   secretKey: proxy-secret
+
+# --- Wildcard TLS via cert-manager DNS-01 (uncomment to enable) ---
+# Requires a ClusterIssuer configured for Cloud DNS DNS-01 challenges.
+# See deploy/recipes/wildcard-tls-gcp.md for the full setup walkthrough.
+#
+# Pre-create the Cloud DNS service-account key secret before enabling:
+#   kubectl create secret generic cert-manager-clouddns-sa \
+#     --from-file=key.json=/path/to/clouddns-sa-key.json
+#
+# certificate:
+#   enabled: true
+#   clusterIssuer: letsencrypt-clouddns
+#   secretName: artifact-wildcard-tls
+#
+# ingress:
+#   hosts:
+#     - host: "*.artifact.corp.example.com"
+#       paths:
+#         - path: /
+#           pathType: Prefix
+#     - host: artifact.corp.example.com
+#       paths:
+#         - path: /
+#           pathType: Prefix
+#   tls:
+#     - hosts:
+#         - "*.artifact.corp.example.com"
+#         - artifact.corp.example.com
+#       secretName: artifact-wildcard-tls

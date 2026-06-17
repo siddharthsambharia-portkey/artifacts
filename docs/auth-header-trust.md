@@ -167,6 +167,30 @@ With `set_xauthrequest = true` and the `groups` scope, oauth2-proxy populates
 `X-Auth-Request-Groups` with a comma-separated list of the user's IdP groups. Artifact
 reads that header automatically with its default `groups_header` setting.
 
+#### Cross-subdomain SSO with oauth2-proxy
+
+Artifact serves each site on its own subdomain (`my-site.<domain>`). For a single sign-on
+session to span all subdomains, the oauth2-proxy session cookie must be scoped to the parent
+domain. Add these settings to `oauth2-proxy.cfg`:
+
+```ini
+# Cross-subdomain session — required for Artifact's per-site subdomain model
+cookie_domain    = .artifact.corp.example.com   # leading dot covers all subdomains
+whitelist_domain = .artifact.corp.example.com   # allow post-login redirects to any subdomain
+```
+
+| Setting | Value | Purpose |
+|---------|-------|---------|
+| `cookie_domain` | `.<domain>` (leading dot) | Sets the `Domain` attribute on the oauth2-proxy session cookie so it is sent to all subdomains of `<domain>` |
+| `whitelist_domain` | `.<domain>` | Permits oauth2-proxy to redirect back to any `<domain>` subdomain after login completes |
+
+> **Why the leading dot matters:** a cookie set for `artifact.corp.example.com` (no dot) is
+> only sent to that exact hostname. A cookie set for `.artifact.corp.example.com` (with dot) is
+> sent to `artifact.corp.example.com` and every subdomain — which is what Artifact's
+> subdomain-per-site model requires.
+
+Replace `artifact.corp.example.com` with your actual `config.domain` value.
+
 ### Google Cloud IAP
 
 IAP forwards the user's email in `X-Goog-Authenticated-User-Email` as
@@ -233,3 +257,21 @@ After deploying, verify the following:
 - [ ] **Admin console is reachable for admins-group users.** Sign in through the proxy as a
   user whose groups header includes `admins` and confirm `https://admin.artifact.corp.example.com`
   loads. A user whose groups header does not include `admins` should receive a 403.
+
+- [ ] **Cross-subdomain session works.** If using oauth2-proxy, confirm that `cookie_domain`
+  is set to `.<domain>` and that navigating from one site subdomain to another does not
+  re-prompt for login.
+
+## Cross-subdomain SSO: native OIDC vs header-trust
+
+For reference, here is how each auth mode handles session cookies across `*.<domain>`:
+
+| Auth mode | How cross-subdomain session is achieved |
+|-----------|-----------------------------------------|
+| Native OIDC (`auth.mode: oidc`) | Artifact sets `cookie.Domain = "." + domain` automatically in `CallbackHandler`. No operator action needed. |
+| Header-trust + oauth2-proxy | Set `cookie_domain = .<domain>` and `whitelist_domain = .<domain>` in `oauth2-proxy.cfg` (see above). |
+| Header-trust + Pomerium | Pomerium handles its own session; the forwarded identity headers arrive fresh on every request — no separate cookie-domain config needed. |
+| Header-trust + Google IAP | IAP manages its own session centrally; no per-subdomain cookie config is required. |
+
+For the wildcard TLS certificate that makes `*.<domain>` HTTPS work, see
+[deploy/recipes/wildcard-tls-gcp.md](../deploy/recipes/wildcard-tls-gcp.md).

@@ -1,0 +1,16 @@
+{{- if .Values.certificate.enabled }}
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: {{ .Release.Name }}-wildcard
+  labels:
+    app: artifact
+spec:
+  secretName: {{ .Values.certificate.secretName | default (printf "%s-wildcard-tls" .Release.Name) }}
+  issuerRef:
+    name: {{ .Values.certificate.clusterIssuer }}
+    kind: ClusterIssuer
+  dnsNames:
+    - {{ .Values.config.domain | quote }}
+    - {{ printf "*.%s" .Values.config.domain | quote }}
+{{- end }}

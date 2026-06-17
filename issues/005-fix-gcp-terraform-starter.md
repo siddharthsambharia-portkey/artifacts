@@ -40,3 +40,13 @@ Keep the "this is a starter, customize for your VPC" framing; just make it corre
 ## Blocked by
 
 None — can start immediately.
+
+## Status (verified 2026-06-17)
+
+**Done.** `deploy/terraform/gcp/main.tf` now parses cleanly — the `variable "region"` one-line
+syntax error is fixed (separate `type` / `default` lines), and the starter wires what it
+provisions: a Workload Identity service account, a bucket IAM binding, and `output`s for the
+bucket name, Cloud SQL connection name, and SA email (mapped in comments to the Helm values they
+feed). A re-review claiming `main.tf:11` still has the two-attributes-on-one-line bug, or that the
+bucket/Cloud SQL are unwired (no SA, no connection name), is **stale** — those are addressed.
+The Helm consumption side lives in issue 007.

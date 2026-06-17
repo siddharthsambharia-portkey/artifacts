@@ -162,7 +162,6 @@ Do not promise or automate around behavior that does not yet exist:
 |---|---|
 | **CLI `artifact deploy` bypasses the server** | `artifact deploy` opens storage and the database directly, deploying as the hardcoded identity `dev@localhost`, bypassing SSO entirely. Production deploys must go through the web UI (drag-and-drop on the home page) or `POST /api/v1/deploy` with an authenticated session. |
 | **`artifact login` is a stub** | The CLI login / token-issuance flow is not yet implemented. Use the web UI for actions that require an authenticated session. |
-| **`header-trust` groups are hardcoded** | In header-trust mode, `Groups` is unconditionally set to `["employees"]` — there is no configurable groups header. Group-scoped visibility and admin/governed-mode group features require OIDC today. |
 
 ---
 

@@ -94,6 +94,14 @@ func Open(cfg *config.Config) (*DB, error) {
 
 func (d *DB) Driver() string { return d.driver }
 
+func (d *DB) Ping(ctx context.Context) error {
+	return d.db.PingContext(ctx)
+}
+
+func (d *DB) Close() error {
+	return d.db.Close()
+}
+
 func (d *DB) Migrate(ctx context.Context) error {
 	return migrate(ctx, d.db, d.driver)
 }

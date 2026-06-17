@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **GCP + Okta deployment profile (issues 005 / 007 / 008 / 009)** — the project's guaranteed end-to-end profile is now fully wired:
+  - `deploy/terraform/gcp/main.tf` HCL syntax fixed (`region` variable multi-attribute bug); starter now provisions a Workload Identity service account + bucket IAM binding and exposes `storage_bucket`, `cloudsql_connection_name`, and `workload_identity_sa_email` as `output`s mapped (in comments) to their Helm values
+  - Helm chart: `config.storage.driver: gcs` is now expressible; a `serviceAccount` block can carry the `iam.gke.io/gcp-service-account` Workload Identity annotation; `auth.mode: header-trust` is fully representable with all four `header_trust.*` fields; proxy and OIDC secrets are injected from Kubernetes Secrets via `headerTrustSecret` and `oidcSecret` blocks
+  - `deploy/helm/artifact/values-gcp.yaml` example showing the complete GCP + Okta profile (GCS driver, Workload Identity, Cloud SQL DSN from a Secret, Okta OIDC secret from a Secret, with a commented header-trust alternative)
+  - Optional cert-manager `Certificate` resource (`certificate.enabled`, `certificate.clusterIssuer`, `certificate.secretName`) for `*.<domain>` + apex, gated off by default; Ingress template updated to render TLS blocks from `ingress.tls`
+  - `GET /readyz` endpoint: pings the database with a 2-second timeout and returns `200 ok` when reachable, `503 Service Unavailable` otherwise; Helm `deployment.yaml` `readinessProbe` now targets `/readyz` (liveness stays on `/healthz`)
+  - `deploy/recipes/wildcard-tls-gcp.md` — full walkthrough: why DNS-01 (not HTTP-01) is required for wildcards, Cloud DNS `ClusterIssuer`, Helm cert request, cross-subdomain SSO for both native OIDC and oauth2-proxy
+
 ### Removed
 
 - Fake `warehouse.driver: snowflake` alias — it only ever worked with a postgres-compatible DSN and otherwise errored. Advertised warehouse drivers are now exactly `none`, `postgres`, and `bigquery`. Real Snowflake support may return later as an explicit feature (issue 003)

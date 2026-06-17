@@ -1,0 +1,35 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-artifact-config
+  labels:
+    app: artifact
+data:
+  artifact.yaml: |
+    domain: {{ .Values.config.domain | quote }}
+    listen: ":8443"
+    auth:
+      mode: {{ .Values.config.auth.mode | quote }}
+      {{- if eq .Values.config.auth.mode "oidc" }}
+      oidc:
+        issuer: {{ .Values.config.auth.oidc.issuer | quote }}
+        client_id: {{ .Values.config.auth.oidc.clientId | quote }}
+        client_secret_env: {{ .Values.config.auth.oidc.clientSecretEnv | quote }}
+      {{- end }}
+      {{- if eq .Values.config.auth.mode "header-trust" }}
+      header_trust:
+        email_header: {{ .Values.config.auth.headerTrust.emailHeader | quote }}
+        name_header: {{ .Values.config.auth.headerTrust.nameHeader | quote }}
+        groups_header: {{ .Values.config.auth.headerTrust.groupsHeader | quote }}
+        proxy_secret_env: {{ .Values.config.auth.headerTrust.proxySecretEnv | quote }}
+      {{- end }}
+    storage:
+      driver: {{ .Values.config.storage.driver | quote }}
+      bucket: {{ .Values.config.storage.bucket | quote }}
+      {{- if .Values.config.storage.endpoint }}
+      endpoint: {{ .Values.config.storage.endpoint | quote }}
+      {{- end }}
+    database:
+      driver: {{ .Values.config.database.driver | quote }}
+    governance:
+      mode: {{ .Values.config.governance.mode | quote }}

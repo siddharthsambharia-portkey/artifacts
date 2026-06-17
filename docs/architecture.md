@@ -85,7 +85,8 @@ All routes are registered in `internal/server/server.go` (infrastructure routes)
 
 | Method | Path | Handler | Auth required |
 |--------|------|---------|---------------|
-| GET | `/healthz` | Returns `ok` + `X-Artifact-Version` header | No |
+| GET | `/healthz` | Liveness — returns `ok` + `X-Artifact-Version` header; no dependency checks | No |
+| GET | `/readyz` | Readiness — pings the database (2-second timeout); returns `200 ok` when reachable, `503` otherwise | No |
 | GET | `/login` | Redirect to OIDC provider (oidc mode) or no-op (dev/header-trust) | No |
 | GET | `/auth/callback` | OIDC code exchange; sets session cookie | No |
 | GET | `/artifact.js` | Serves embedded SDK JavaScript | Outer auth middleware |

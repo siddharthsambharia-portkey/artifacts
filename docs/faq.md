@@ -103,6 +103,45 @@ binary is installed. There is no cloud account, no API key, and no sign-up requi
 
 ---
 
+## Why is there no MCP server (yet)?
+
+The short answer: the auth model a *hosted* MCP server would require is a much bigger
+commitment than the feature is worth today, and the cheap version of MCP is already covered
+by what Artifact ships.
+
+There are two shapes of MCP, and they have very different costs:
+
+- **Local agents** (Cursor, Claude Code, a locally-run Codex): the agent runs on the user's
+  own machine, inside the trust bubble, and can hold a credential. This already works with the
+  service-account Bearer tokens from
+  [ADR-0005](adr/0005-programmatic-deploy-tokens.md) — a token in the agent's MCP config
+  authenticates `deploy`/`list` calls against `/api/*` with no SSO redirect, behind a proxy or
+  in native-OIDC mode. A thin MCP wrapper over the existing deployer is days of work, not a
+  new auth model.
+- **Hosted assistants** (ChatGPT.com, Claude.ai): the agent runs on a vendor's servers,
+  *outside* the trust bubble. A request from OpenAI's or Anthropic's cloud is, by definition,
+  not a verified employee, so it is bounced at the identity proxy — the same `302`-to-login
+  problem the deploy API had before tokens. Making this work requires turning Artifact into a
+  full **OAuth 2.0 authorization server**: discovery endpoints, dynamic client registration,
+  a consent screen, PKCE token exchange, refresh/revocation, and bridging the existing IdP
+  into the consent step. That is weeks of security-critical code.
+
+So the policy is the same "say no until it's real" discipline as custom backends and cron:
+
+- The **local-agent** path is the Shopify Quick model (`quick init` drops skills + MCP into a
+  local agent that is already behind IAP). It needs no new auth and stays inside the trust
+  bubble. When we ship MCP, this is the version we ship first.
+- The **hosted-assistant** path is the only thing that forces OAuth, and it punches a
+  deliberate hole in the trust bubble — an external service acting on a user's behalf. We will
+  not build that on a hypothesis. It needs a real, recurring "I must connect from
+  ChatGPT.com and will not run a local agent" requirement to justify the cost and the new
+  attack surface.
+
+If you want agent-driven deploys today, point a local agent at the deploy API with a
+service-account token. That covers the use case without any of the hosted-OAuth machinery.
+
+---
+
 ## What if I need public access?
 
 Artifact does not support it and is not designed for it. Placing Artifact on the public

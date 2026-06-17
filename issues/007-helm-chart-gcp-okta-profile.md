@@ -46,4 +46,3 @@ WI SA email).
 
 - Soft: 005 (terraform outputs feed these values). Can proceed in parallel; reconcile field names
   when both land.
-- Soft: 006 (if the deploy-token design introduces a secret/env, surface it here too).

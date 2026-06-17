@@ -39,6 +39,15 @@ minute.
 | [Governance & admin](governance-and-admin.md) | Trust vs governed mode, quotas, audit log, admin console |
 | [Architecture](architecture.md) | How the binary is built — request flow, packages, storage, realtime |
 
+## Deploy recipes
+
+Step-by-step runbooks for specific infrastructure configurations:
+
+| Recipe | What it covers |
+|---|---|
+| [Wildcard TLS via cert-manager DNS-01 (GCP)](../deploy/recipes/wildcard-tls-gcp.md) | cert-manager + Cloud DNS DNS-01 solver for `*.<domain>`; cross-subdomain SSO |
+| [Pomerium identity proxy](../deploy/recipes/pomerium.md) | Full Pomerium config for header-trust mode |
+
 > Deploying with a coding agent? Point the agent at the operator skill at the repo root
 > ([`AGENTS.md`](../AGENTS.md) / [`CLAUDE.md`](../CLAUDE.md)).
 

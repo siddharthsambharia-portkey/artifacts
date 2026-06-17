@@ -14,23 +14,70 @@ spec:
       labels:
         app: artifact
     spec:
+      serviceAccountName: {{ .Values.serviceAccount.name | default (printf "%s-artifact" .Release.Name) }}
+      automountServiceAccountToken: {{ .Values.serviceAccount.automountServiceAccountToken }}
+      volumes:
+        - name: artifact-config
+          configMap:
+            name: {{ .Release.Name }}-artifact-config
       containers:
         - name: artifact
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           ports:
             - containerPort: 8443
+          volumeMounts:
+            - name: artifact-config
+              mountPath: /etc/artifact
+              readOnly: true
           env:
+            - name: ARTIFACT_CONFIG
+              value: /etc/artifact/artifact.yaml
+            {{- if .Values.externalDatabase.enabled }}
+            {{- if .Values.externalDatabase.secretName }}
+            - name: ARTIFACT_DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.externalDatabase.secretName }}
+                  key: {{ .Values.externalDatabase.secretKey }}
+            {{- else }}
             - name: ARTIFACT_DATABASE_URL
               value: {{ .Values.externalDatabase.url | quote }}
+            {{- end }}
+            {{- end }}
+            {{- if and .Values.externalS3.enabled (eq .Values.config.storage.driver "s3") }}
             - name: ARTIFACT_S3_ACCESS_KEY
               value: {{ .Values.externalS3.accessKey | quote }}
             - name: ARTIFACT_S3_SECRET_KEY
+              {{- if .Values.externalS3.secretName }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.externalS3.secretName }}
+                  key: {{ .Values.externalS3.secretKey }}
+              {{- else }}
               valueFrom:
                 secretKeyRef:
                   name: {{ .Release.Name }}-s3
                   key: secretKey
                   optional: true
+              {{- end }}
+            {{- end }}
+            {{- if eq .Values.config.auth.mode "header-trust" }}
+            {{- if .Values.headerTrustSecret.secretName }}
+            - name: {{ .Values.config.auth.headerTrust.proxySecretEnv }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.headerTrustSecret.secretName }}
+                  key: {{ .Values.headerTrustSecret.secretKey }}
+            {{- end }}
+            {{- end }}
+            {{- if and (eq .Values.config.auth.mode "oidc") .Values.oidcSecret.secretName }}
+            - name: {{ .Values.config.auth.oidc.clientSecretEnv }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.oidcSecret.secretName }}
+                  key: {{ .Values.oidcSecret.secretKey }}
+            {{- end }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
           livenessProbe:
@@ -40,5 +87,8 @@ spec:
             initialDelaySeconds: 5
           readinessProbe:
             httpGet:
-              path: /healthz
+              path: /readyz
               port: 8443
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            failureThreshold: 3

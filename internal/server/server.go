@@ -103,6 +103,7 @@ func (s *Server) routes() http.Handler {
 		w.Header().Set("X-Artifact-Version", ServerVersion)
 		w.Write([]byte("ok"))
 	})
+	r.Get("/readyz", s.readyzHandler)
 
 	gov := governance.New(s.cfg)
 	readAuthz := func(ctx context.Context, u *auth.User, site string) error {
@@ -250,6 +251,17 @@ func (s *Server) listSites(w http.ResponseWriter, r *http.Request) {
 		siteList = []db.SiteRecord{}
 	}
 	writeJSON(w, siteList)
+}
+
+func (s *Server) readyzHandler(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := context.WithTimeout(r.Context(), 2*time.Second)
+	defer cancel()
+	if err := s.db.Ping(ctx); err != nil {
+		http.Error(w, "db unavailable", http.StatusServiceUnavailable)
+		return
+	}
+	w.Header().Set("X-Artifact-Version", ServerVersion)
+	w.Write([]byte("ok"))
 }
 
 func (s *Server) loggingMiddleware(next http.Handler) http.Handler {
