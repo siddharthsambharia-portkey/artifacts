@@ -8,8 +8,13 @@ terraform {
 
 variable "region" { type = string default = "us-east-1" }
 
+variable "bucket_name" {
+  type        = string
+  description = "S3 bucket name for site storage. S3 bucket names are globally unique — choose a name specific to your organisation (e.g. acme-artifact-sites). No default is provided to prevent accidental name collisions."
+}
+
 resource "aws_s3_bucket" "sites" {
-  bucket = "artifact-sites"
+  bucket = var.bucket_name
 }
 
 resource "aws_db_instance" "artifact" {

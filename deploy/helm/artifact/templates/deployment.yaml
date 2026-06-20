@@ -20,6 +20,11 @@ spec:
         - name: artifact-config
           configMap:
             name: {{ .Release.Name }}-artifact-config
+        {{- if and .Values.storageKeyFallback.enabled .Values.storageKeyFallback.secretName (eq .Values.config.storage.driver "gcs") }}
+        - name: gcs-key
+          secret:
+            secretName: {{ .Values.storageKeyFallback.secretName }}
+        {{- end }}
       containers:
         - name: artifact
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
@@ -30,9 +35,18 @@ spec:
             - name: artifact-config
               mountPath: /etc/artifact
               readOnly: true
+            {{- if and .Values.storageKeyFallback.enabled .Values.storageKeyFallback.secretName (eq .Values.config.storage.driver "gcs") }}
+            - name: gcs-key
+              mountPath: /var/secrets/gcs
+              readOnly: true
+            {{- end }}
           env:
             - name: ARTIFACT_CONFIG
               value: /etc/artifact/artifact.yaml
+            {{- if and .Values.storageKeyFallback.enabled .Values.storageKeyFallback.secretName (eq .Values.config.storage.driver "gcs") }}
+            - name: GOOGLE_APPLICATION_CREDENTIALS
+              value: {{ printf "/var/secrets/gcs/%s" (.Values.storageKeyFallback.gcsKeyFileKey | default "key.json") | quote }}
+            {{- end }}
             {{- if .Values.externalDatabase.enabled }}
             {{- if .Values.externalDatabase.secretName }}
             - name: ARTIFACT_DATABASE_URL
@@ -45,7 +59,19 @@ spec:
               value: {{ .Values.externalDatabase.url | quote }}
             {{- end }}
             {{- end }}
-            {{- if and .Values.externalS3.enabled (eq .Values.config.storage.driver "s3") }}
+            {{- if eq .Values.config.storage.driver "s3" }}
+            {{- if and .Values.storageKeyFallback.enabled .Values.storageKeyFallback.secretName }}
+            - name: ARTIFACT_S3_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.storageKeyFallback.secretName }}
+                  key: {{ .Values.storageKeyFallback.s3AccessKeyKey | default "access-key" }}
+            - name: ARTIFACT_S3_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.storageKeyFallback.secretName }}
+                  key: {{ .Values.storageKeyFallback.s3SecretKeyKey | default "secret-key" }}
+            {{- else if .Values.externalS3.enabled }}
             - name: ARTIFACT_S3_ACCESS_KEY
               value: {{ .Values.externalS3.accessKey | quote }}
             - name: ARTIFACT_S3_SECRET_KEY
@@ -61,6 +87,7 @@ spec:
                   key: secretKey
                   optional: true
               {{- end }}
+            {{- end }}
             {{- end }}
             {{- if eq .Values.config.auth.mode "header-trust" }}
             {{- if .Values.headerTrustSecret.secretName }}
@@ -92,3 +119,17 @@ spec:
             initialDelaySeconds: 5
             periodSeconds: 10
             failureThreshold: 3
+        {{- if .Values.cloudSqlProxy.enabled }}
+        - name: cloud-sql-proxy
+          image: {{ .Values.cloudSqlProxy.image | quote }}
+          args:
+            - "--structured-logs"
+            - {{ printf "--port=%d" (int64 .Values.cloudSqlProxy.port) | quote }}
+            - {{ .Values.cloudSqlProxy.instanceConnectionName | quote }}
+          securityContext:
+            runAsNonRoot: true
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "100m"
+        {{- end }}

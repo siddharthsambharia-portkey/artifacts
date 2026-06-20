@@ -179,3 +179,35 @@ Build a mode where sites live at `<domain>/<site>/` instead of `<site>.<domain>`
 - Add an internal-CA recipe (drop a pre-issued wildcard into the ingress TLS secret).
 - Add an acme-dns / CNAME-delegation recipe.
 - Make `docs/self-hosting.md` point operators at this menu before assuming DNS-01.
+
+---
+
+## 7. Ingress controller glue
+
+### nginx-ingress
+
+Set `ingress.controller: nginx` in `values.yaml`. The chart renders a `ConfigMap`
+(`<release>-nginx-proxy-headers`) and an `Ingress` for `*.<domain>` and `admin.<domain>`
+with the `proxy-set-headers` annotation, so `X-Artifact-Proxy-Auth` is injected on every
+request. See `docs/self-hosting.md` for the full install command.
+
+### Traefik v3
+
+Set `ingress.controller: traefik`. The chart renders a `Middleware` and an `IngressRoute`
+using Traefik v3 `HostRegexp` syntax:
+
+```yaml
+# Traefik v3 — wildcards use plain regex, no named captures:
+match: HostRegexp(`.+\.artifact\.corp\.example\.com`)
+
+# Traefik v2 (old) — used named captures (NOT supported in v3):
+# match: HostRegexp({sub:.+}.artifact.corp.example.com)
+```
+
+The `Middleware` injects `X-Artifact-Proxy-Auth` via `customRequestHeaders` (sourced
+from `headerTrustSecret` at helm install time). The `IngressRoute` references the
+middleware on both the wildcard and admin routes.
+
+> **v2 → v3 migration note:** if you see `HostRegexp({sub:.+}.domain)` in your Traefik
+> config, replace it with `` HostRegexp(`.+\.domain`) ``. The named-capture form
+> was removed in Traefik v3.

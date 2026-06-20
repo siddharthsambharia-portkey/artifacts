@@ -160,8 +160,21 @@ In `oauth2-proxy.cfg`:
 # oauth2-proxy.cfg
 set_xauthrequest = true          # emits X-Auth-Request-Email, X-Auth-Request-User, X-Auth-Request-Groups
 scope = openid email profile groups
-pass_request_headers = X-Artifact-Proxy-Auth=changeme-proxy-shared-secret
 ```
+
+> **`pass_request_headers` is a no-op in ForwardAuth mode.** oauth2-proxy ForwardAuth only
+> authenticates the request — it does not proxy the request itself, so any headers
+> `pass_request_headers` would set never reach Artifact. Use your ingress controller
+> to inject `X-Artifact-Proxy-Auth` instead:
+>
+> ```bash
+> # Helm chart (nginx controller) — injects X-Artifact-Proxy-Auth automatically:
+> --set ingress.controller=nginx \
+> --set headerTrustSecret.secretName=artifact-proxy
+> ```
+>
+> The chart renders a `ConfigMap` (`<release>-nginx-proxy-headers`) wired to the Ingress via
+> `nginx.ingress.kubernetes.io/proxy-set-headers`, so the header is injected on every request.
 
 With `set_xauthrequest = true` and the `groups` scope, oauth2-proxy populates
 `X-Auth-Request-Groups` with a comma-separated list of the user's IdP groups. Artifact
@@ -275,3 +288,6 @@ For reference, here is how each auth mode handles session cookies across `*.<dom
 
 For the wildcard TLS certificate that makes `*.<domain>` HTTPS work, see
 [deploy/recipes/wildcard-tls-gcp.md](../deploy/recipes/wildcard-tls-gcp.md).
+
+For the full list of headers Artifact reads and the shared-secret protocol, see
+[Header contract for identity proxies](header-contract.md).

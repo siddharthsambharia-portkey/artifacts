@@ -1,0 +1,61 @@
+{{- if eq (default "" .Values.ingress.controller) "nginx" }}
+---
+# nginx proxy-headers ConfigMap — injects X-Artifact-Proxy-Auth on every
+# request forwarded to Artifact so header-trust mode does not redirect-loop.
+# The value is populated at helm install/upgrade time from headerTrustSecret
+# (same Secret the app reads for ARTIFACT_PROXY_SECRET).
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-nginx-proxy-headers
+  labels:
+    app: artifact
+data:
+{{- $proxyAuth := "" }}
+{{- if .Values.headerTrustSecret.secretName }}
+{{- $s := lookup "v1" "Secret" .Release.Namespace .Values.headerTrustSecret.secretName }}
+{{- if $s }}
+{{- $proxyAuth = index $s.data (.Values.headerTrustSecret.secretKey | default "proxy-secret") | b64dec }}
+{{- end }}
+{{- end }}
+  X-Artifact-Proxy-Auth: {{ $proxyAuth | quote }}
+---
+# Wildcard + admin Ingress for nginx controller.
+# Routes *.{{ .Values.config.domain }} and admin.{{ .Values.config.domain }} to Artifact
+# and wires the proxy-headers ConfigMap so X-Artifact-Proxy-Auth is always present.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ .Release.Name }}-artifact-nginx
+  labels:
+    app: artifact
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-set-headers: {{ printf "%s/%s-nginx-proxy-headers" .Release.Namespace .Release.Name | quote }}
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: {{ printf "*.%s" .Values.config.domain | quote }}
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: {{ .Release.Name }}-artifact
+            port:
+              number: {{ .Values.service.port }}
+  - host: {{ printf "admin.%s" .Values.config.domain | quote }}
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: {{ .Release.Name }}-artifact
+            port:
+              number: {{ .Values.service.port }}
+  {{- if .Values.ingress.tls }}
+  tls:
+    {{- toYaml .Values.ingress.tls | nindent 4 }}
+  {{- end }}
+{{- end }}

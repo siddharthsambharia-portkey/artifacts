@@ -24,6 +24,10 @@ ingress:
   # When certificate.enabled=true the secret name defaults to <release>-wildcard-tls;
   # set certificate.secretName and mirror it here.
   tls: []
+  # Set to "nginx" or "traefik" to render batteries-included ingress glue
+  # (middleware + wildcard routing) for header-trust mode.
+  # Leave blank (default) to manage ingress annotations yourself.
+  controller: ""
 
 # Kubernetes ServiceAccount for the pod.
 # Set annotations["iam.gke.io/gcp-service-account"] for Workload Identity on GKE;
@@ -63,11 +67,16 @@ config:
     mode: trust
 
 # External Postgres DSN.
-# Supply via url (plaintext — avoid in production) or reference a pre-existing
-# Kubernetes Secret with secretName + secretKey (recommended for production).
+# Production path (recommended): create a Kubernetes Secret holding the DSN and set
+# secretName + secretKey. The deployment template injects the value as ARTIFACT_DATABASE_URL.
+#   kubectl create secret generic artifact-db \
+#     --from-literal=database-url="postgres://user:pass@host:5432/artifact?sslmode=require"
+#
+# Local dev / testing only: set url directly (plaintext — never use in production).
+# url is intentionally empty; leaving it blank forces you to supply a real DSN or use secretName.
 externalDatabase:
   enabled: true
-  url: "postgres://artifact:secret@postgres:5432/artifact"
+  url: ""
   secretName: ""
   secretKey: database-url
 
@@ -79,6 +88,31 @@ externalS3:
   accessKey: ""
   secretName: ""
   secretKey: secretKey
+
+# First-class storage key fallback for operators who cannot create IAM bindings
+# (Workload Identity on GKE or IRSA on EKS).
+# When enabled, cloud-storage credentials are mounted from a Kubernetes Secret
+# instead of relying on Workload Identity / IRSA.
+#
+# For GCS JSON key:
+#   kubectl create secret generic artifact-gcs-key \
+#     --from-file=key.json=/path/to/service-account-key.json
+# For S3 / compatible access keys:
+#   kubectl create secret generic artifact-s3-creds \
+#     --from-literal=access-key=<key> --from-literal=secret-key=<secret>
+#
+# NOTE: enabling this suppresses the Workload Identity ServiceAccount annotation
+# (iam.gke.io/gcp-service-account) so the two paths are mutually exclusive.
+storageKeyFallback:
+  enabled: false
+  # Name of the pre-existing Kubernetes Secret holding the credential.
+  secretName: ""
+  # Key inside the Secret for GCS JSON key file (driver: gcs only).
+  gcsKeyFileKey: "key.json"
+  # Key inside the Secret for S3 access key (driver: s3 only).
+  s3AccessKeyKey: "access-key"
+  # Key inside the Secret for S3 secret key (driver: s3 only).
+  s3SecretKeyKey: "secret-key"
 
 # Kubernetes Secret that supplies the proxy shared secret for header-trust auth.
 # The value is injected as the env var named in config.auth.headerTrust.proxySecretEnv.
@@ -111,6 +145,23 @@ certificate:
 nats:
   enabled: false
   url: nats://nats:4222
+
+# Cloud SQL Auth Proxy sidecar for GCP Cloud SQL connections via socket DSN.
+# Off by default. Enable to add the sidecar alongside the Artifact container;
+# it uses the pod's existing identity (Workload Identity or storageKeyFallback).
+#
+# Once enabled, point externalDatabase at the local socket:
+#   externalDatabase.url: "postgres://artifact:<pw>@/artifact?host=/cloudsql/<connection>"
+# Or use externalDatabase.secretName pointing to a Secret with the socket DSN.
+cloudSqlProxy:
+  enabled: false
+  # Cloud SQL connection name: <project>:<region>:<instance>
+  # Obtain with: terraform output -raw cloudsql_connection_name
+  instanceConnectionName: ""
+  # TCP port the proxy listens on (if using TCP instead of socket DSN)
+  port: 5432
+  # Cloud SQL Auth Proxy image (v2)
+  image: "gcr.io/cloud-sql-connectors/cloud-sql-proxy:2"
 
 resources:
   limits:

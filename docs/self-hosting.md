@@ -136,9 +136,17 @@ The Helm chart in `deploy/helm/artifact/` packages the deployment, service, and 
 helm install artifact ./deploy/helm/artifact/ \
   --set config.domain=artifact.corp.example.com \
   --set config.auth.mode=oidc \
-  --set externalDatabase.url=postgres://artifact:secret@rds-host:5432/artifact \
+  --set externalDatabase.secretName=artifact-db \
+  --set externalDatabase.secretKey=database-url \
   --set externalS3.accessKey=<key> \
   --set-string externalS3.secretKey=<secret>
+```
+
+Create the database secret before running helm install:
+
+```bash
+kubectl create secret generic artifact-db \
+  --from-literal=database-url="postgres://user:pass@rds-host:5432/artifact?sslmode=require"
 ```
 
 ### Key `values.yaml` fields
@@ -208,6 +216,27 @@ or if cert-manager CRDs are not installed in the cluster.
 > to support wildcard hosts. nginx-ingress does. Add a `*.<domain>` entry to `ingress.hosts`
 > and reference the TLS secret in `ingress.tls` to enable HTTPS on all site subdomains.
 
+### header-trust + nginx: low-power path
+
+If your cluster already has an identity proxy (oauth2-proxy, Pomerium) in front of nginx-ingress
+and you cannot create IAM bindings, use `ingress.controller: nginx` to get batteries-included
+glue without hand-written `kubectl patch`es:
+
+```bash
+helm upgrade --install artifact ./deploy/helm/artifact/ \
+  --set config.auth.mode=header-trust \
+  --set config.domain=artifact.corp.example.com \
+  --set headerTrustSecret.secretName=artifact-proxy \
+  --set ingress.controller=nginx
+```
+
+The chart renders:
+- A `ConfigMap` (`<release>-nginx-proxy-headers`) with the `X-Artifact-Proxy-Auth` header wired to
+  the value from `headerTrustSecret`.
+- An `Ingress` for `*.<domain>` and `admin.<domain>` with the `proxy-set-headers` annotation.
+
+Both resources survive `helm upgrade` — no manual patching required.
+
 ---
 
 ## Provision GCP infrastructure with Terraform
@@ -266,6 +295,52 @@ pod's ServiceAccount, and pulls the database URL and OIDC client secret from the
 created above. No S3 access keys are required — the GCS driver authenticates via
 Application Default Credentials through the Workload Identity binding.
 
+#### Low-power fallback: GCS JSON key
+
+If `setIamPolicy` is denied in your project (you cannot create the Workload Identity binding),
+use a GCS service-account JSON key instead:
+
+```bash
+# Create the key secret once — never commit the key file
+kubectl create secret generic artifact-gcs-key \
+  --from-file=key.json=/path/to/service-account-key.json
+
+# Install with the fallback toggle — survives helm upgrade
+helm install artifact ./deploy/helm/artifact/ \
+  -f deploy/helm/artifact/values-gcp.yaml \
+  --set config.domain=artifact.corp.example.com \
+  --set config.storage.bucket="$BUCKET" \
+  --set storageKeyFallback.enabled=true \
+  --set storageKeyFallback.secretName=artifact-gcs-key
+```
+
+The chart mounts the JSON key at `/var/secrets/gcs/key.json` and sets
+`GOOGLE_APPLICATION_CREDENTIALS` so the GCS driver uses it automatically. The Workload
+Identity annotation is suppressed from the ServiceAccount so the two paths cannot conflict.
+
+#### Enabling the Cloud SQL Auth Proxy sidecar
+
+The GCP profile connects to Cloud SQL via a socket DSN
+(`host=/cloudsql/<connection_name>`). The Cloud SQL Auth Proxy must be running
+alongside the app for that socket to exist. Enable the sidecar with:
+
+```bash
+CONN=$(terraform output -raw cloudsql_connection_name)
+
+helm upgrade --install artifact ./deploy/helm/artifact/ \
+  -f deploy/helm/artifact/values-gcp.yaml \
+  --set config.domain=artifact.corp.example.com \
+  --set config.storage.bucket="$BUCKET" \
+  --set serviceAccount.annotations."iam\.gke\.io/gcp-service-account"="$WI_SA" \
+  --set cloudSqlProxy.enabled=true \
+  --set cloudSqlProxy.instanceConnectionName="$CONN"
+```
+
+The sidecar runs alongside the Artifact container in the same pod and uses the pod's
+existing Workload Identity token — no separate credential is required. When using the
+`storageKeyFallback` (issue 014), the sidecar also uses the mounted GCS JSON key via
+`GOOGLE_APPLICATION_CREDENTIALS`.
+
 #### Key `values-gcp.yaml` fields
 
 | Field | Purpose |
@@ -294,7 +369,7 @@ Add these before going to production.
 ```bash
 cd deploy/terraform/aws
 terraform init
-terraform apply -var db_password=<secret>
+terraform apply -var db_password=<secret> -var bucket_name=<your-org>-artifact-sites
 ```
 
 After `apply`, point your `artifact.yaml` at the RDS DSN and S3 bucket:
@@ -302,12 +377,144 @@ After `apply`, point your `artifact.yaml` at the RDS DSN and S3 bucket:
 ```yaml
 storage:
   driver: s3
-  bucket: artifact-sites
+  bucket: <your-bucket-name>   # the bucket_name variable you passed to terraform apply
 
 database:
   driver: postgres
   url_env: ARTIFACT_DATABASE_URL
 ```
+
+---
+
+## Harden for production
+
+The low-power toggles documented in the provisioning sections above (JSON key fallback, header-trust auth, single replica) are designed as a **Stage-1 on-ramp** — a way to run a champion trial without requiring IAM bindings, OIDC app registration, or a NATS cluster. None of them involve a reinstall to remove. Each is a one-line value flip in `values.yaml`.
+
+### Risk statement for the low-power configuration
+
+The low-power config is not exposed to the public internet — SSO still gates every request. The residual risks are narrower:
+
+- **Header spoofing inside a shared cluster.** A process on the same internal network that can reach the Artifact pod port could forge identity headers. This is closed by the `X-Artifact-Proxy-Auth` shared secret (`headerTrustSecret`), which the binary enforces at boot in `header-trust` mode — if the secret env var is unset, the process refuses to start.
+- **Blast radius from a leaked storage key.** A GCS JSON key or S3 access key, if leaked, grants the key's full IAM scope. A Workload Identity / IRSA binding is scoped to the pod's identity and cannot be extracted from the cluster.
+
+**Net assessment:** fine for a champion trial. Flip both before handling sensitive data or rolling out company-wide.
+
+### Checklist: four value flips
+
+**1. GCS JSON key / S3 access key → Workload Identity (GKE) / IRSA (EKS)**
+
+Low-power:
+```yaml
+storageKeyFallback:
+  enabled: true
+  secretName: artifact-gcs-key   # or artifact-s3-key
+
+serviceAccount:
+  annotations: {}
+  automountServiceAccountToken: false
+```
+
+Hardened (GKE example):
+```yaml
+storageKeyFallback:
+  enabled: false
+  secretName: ""
+
+serviceAccount:
+  annotations:
+    iam.gke.io/gcp-service-account: artifact@my-corp-project.iam.gserviceaccount.com
+  automountServiceAccountToken: true   # required for WI token projection
+```
+
+For EKS, replace the annotation with `eks.amazonaws.com/role-arn: arn:aws:iam::<account>:role/artifact-role` and leave `automountServiceAccountToken: false` (IRSA does not require token projection). The cross-cloud WI/IRSA mapping is documented in [Header contract for identity proxies](header-contract.md).
+
+After flipping, delete the key secret: `kubectl delete secret artifact-gcs-key`.
+
+---
+
+**2. Header-trust → Native OIDC**
+
+Native OIDC and header-trust are **co-equal supported auth modes**. Header-trust is the natural on-ramp when you already have an identity proxy in front of the cluster; Native OIDC is the natural Stage-2 destination when you want Artifact to run the login/callback flow itself. Neither mode is deprecated.
+
+Low-power:
+```yaml
+config:
+  auth:
+    mode: header-trust
+
+headerTrustSecret:
+  secretName: artifact-proxy
+```
+
+Hardened:
+```yaml
+config:
+  auth:
+    mode: oidc
+    oidc:
+      issuer: https://corp.okta.com
+      clientId: 0oa...your_client_id
+      clientSecretEnv: ARTIFACT_OIDC_SECRET
+
+oidcSecret:
+  secretName: artifact-oidc
+  secretKey: client-secret
+
+headerTrustSecret:
+  secretName: ""
+```
+
+Create the OIDC client secret before upgrading:
+```bash
+kubectl create secret generic artifact-oidc \
+  --from-literal=client-secret=<your-oidc-client-secret>
+helm upgrade artifact ./deploy/helm/artifact/ -f values.yaml
+```
+
+See [Auth — Okta](auth-okta.md) for a step-by-step OIDC registration walkthrough.
+
+---
+
+**3. Single replica → multi-replica (NATS)**
+
+Low-power:
+```yaml
+replicaCount: 1
+
+nats:
+  enabled: false
+```
+
+Hardened:
+```yaml
+replicaCount: 3
+
+nats:
+  enabled: true
+  url: nats://nats:4222
+```
+
+With `replicaCount: 1` the WebSocket hub runs in-process and needs no pub/sub bus. As soon as you add a second replica, realtime events (DB subscriptions, presence) must be fanned out across pods. Deploy a NATS server before flipping `nats.enabled: true`:
+
+```bash
+helm repo add nats https://nats-io.github.io/k8s/helm/charts/
+helm install nats nats/nats --set config.cluster.enabled=true
+
+helm upgrade artifact ./deploy/helm/artifact/ \
+  --set replicaCount=3 \
+  --set nats.enabled=true \
+  --set nats.url=nats://nats:4222
+```
+
+---
+
+**4. Summary: before and after**
+
+| Concern | Low-power (Stage 1) | Hardened (Stage 2) |
+|---------|---------------------|-------------------|
+| Storage credentials | JSON key / access key in a K8s Secret | Workload Identity (GKE) / IRSA (EKS) |
+| Auth | `header-trust` via identity proxy | `oidc` — Artifact runs OIDC flow, **or** keep `header-trust` (co-equal) |
+| Realtime scale | `replicaCount: 1`, in-process hub | `replicaCount: N`, NATS pub/sub bus |
 
 ---
 
@@ -355,6 +562,10 @@ Every production deployment needs a real auth mode. The two main options:
   and let the proxy stamp identity headers. See
   [Auth — header-trust](auth-header-trust.md). The recipe in
   `deploy/recipes/pomerium.md` shows a complete Pomerium config.
+
+For a cloud-by-cloud comparison of the storage/identity/database layer (GCP / AWS / Azure)
+and for the full header contract used in header-trust mode, see
+[Header contract for identity proxies](header-contract.md).
 
 Never use `auth.mode: dev` in production. It signs every request in as `dev@localhost` with
 no authentication.

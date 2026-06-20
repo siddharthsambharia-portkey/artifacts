@@ -1,0 +1,54 @@
+{{- if eq (default "" .Values.ingress.controller) "traefik" }}
+---
+# Traefik Middleware — injects X-Artifact-Proxy-Auth on every forwarded request
+# so header-trust mode does not redirect-loop.
+# Value sourced from headerTrustSecret at helm install/upgrade time.
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: {{ .Release.Name }}-artifact-proxy-auth
+  labels:
+    app: artifact
+spec:
+  headers:
+    customRequestHeaders:
+{{- $proxyAuth := "" }}
+{{- if .Values.headerTrustSecret.secretName }}
+{{- $s := lookup "v1" "Secret" .Release.Namespace .Values.headerTrustSecret.secretName }}
+{{- if $s }}
+{{- $proxyAuth = index $s.data (.Values.headerTrustSecret.secretKey | default "proxy-secret") | b64dec }}
+{{- end }}
+{{- end }}
+      X-Artifact-Proxy-Auth: {{ $proxyAuth | quote }}
+---
+# Traefik IngressRoute — wildcard + admin routing using Traefik v3 HostRegexp syntax.
+# v3 note: HostRegexp(`.+\.escaped-domain`) replaces the v2 named-capture form.
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: {{ .Release.Name }}-artifact-traefik
+  labels:
+    app: artifact
+spec:
+  entryPoints:
+    - websecure
+  routes:
+  - match: {{ printf "HostRegexp(`.+\\.%s`)" (.Values.config.domain | replace "." "\\.") | quote }}
+    kind: Rule
+    middlewares:
+    - name: {{ .Release.Name }}-artifact-proxy-auth
+    services:
+    - name: {{ .Release.Name }}-artifact
+      port: {{ .Values.service.port }}
+  - match: {{ printf "Host(`admin.%s`)" .Values.config.domain | quote }}
+    kind: Rule
+    middlewares:
+    - name: {{ .Release.Name }}-artifact-proxy-auth
+    services:
+    - name: {{ .Release.Name }}-artifact
+      port: {{ .Values.service.port }}
+  {{- if .Values.ingress.tls }}
+  tls:
+    secretName: {{ (index .Values.ingress.tls 0).secretName | default (printf "%s-wildcard-tls" .Release.Name) | quote }}
+  {{- end }}
+{{- end }}

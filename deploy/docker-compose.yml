@@ -1,3 +1,6 @@
+# Dev / demo stack only — DO NOT use in production.
+# Credentials below (postgres/artifact, minioadmin) are hardcoded for local use.
+# For production, use real secrets and a proper identity proxy or OIDC provider.
 services:
   artifact:
     build:
@@ -6,12 +9,12 @@ services:
     ports:
       - "8443:8443"
     environment:
-      ARTIFACT_CONFIG: /etc/siddharthsambharia-portkey/artifacts.yaml
+      ARTIFACT_CONFIG: /etc/artifact/artifact.yaml
       ARTIFACT_DATABASE_URL: postgres://artifact:artifact@postgres:5432/artifact?sslmode=disable
       ARTIFACT_S3_ACCESS_KEY: minioadmin
       ARTIFACT_S3_SECRET_KEY: minioadmin
     volumes:
-      - ./artifact.docker.yaml:/etc/siddharthsambharia-portkey/artifacts.yaml:ro
+      - ./artifact.docker.yaml:/etc/artifact/artifact.yaml:ro
     depends_on:
       postgres:
         condition: service_healthy
@@ -19,7 +22,7 @@ services:
         condition: service_started
       minio-init:
         condition: service_completed_successfully
-    command: ["serve", "--config", "/etc/siddharthsambharia-portkey/artifacts.yaml"]
+    command: ["serve", "--config", "/etc/artifact/artifact.yaml"]
     healthcheck:
       test: ["CMD", "/artifact", "version"]
       interval: 10s
