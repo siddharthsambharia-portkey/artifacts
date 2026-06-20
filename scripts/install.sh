@@ -28,7 +28,7 @@ trap 'rm -rf "$TMP"' EXIT
 if ! curl -fsSL "$URL" -o "$TMP/artifact.tar.gz" 2>/dev/null; then
   echo "Release binary not found. Building from source..."
   if ! command -v go >/dev/null 2>&1; then
-    echo "Go is required to build from source. Install Go 1.23+ and retry." >&2
+    echo "Go is required to build from source. Install Go 1.25+ and retry." >&2
     exit 1
   fi
   SRC=$(mktemp -d)
