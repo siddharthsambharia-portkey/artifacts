@@ -136,6 +136,7 @@ func (s *Server) routes() http.Handler {
 		r.Get("/artifact.js", s.serveSDK)
 		r.Get("/ui.css", s.serveUICSS)
 		r.Get("/api/v1/sites", s.listSites)
+		r.Get("/api/v1/sites/{site}/download", s.handleDownloadSite)
 
 		r.Group(func(r chi.Router) {
 			r.Use(auth.RequireUser)

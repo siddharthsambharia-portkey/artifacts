@@ -11,7 +11,9 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/siddharthsambharia-portkey/artifacts/internal/auth"
+	"github.com/siddharthsambharia-portkey/artifacts/internal/governance"
 )
 
 const maxDeployFiles = 10000
@@ -362,6 +364,68 @@ func findHTMLFiles(root string) []string {
 		}
 	}
 	return html
+}
+
+// handleDownloadSite streams the current deploy of a site as a zip archive so
+// visitors can fork it and make changes locally.
+func (s *Server) handleDownloadSite(w http.ResponseWriter, r *http.Request) {
+	site := chi.URLParam(r, "site")
+	if site == "" {
+		writeError(w, "Site name is required.", http.StatusBadRequest)
+		return
+	}
+
+	gov := governance.New(s.cfg)
+	if !gov.IsTrustMode() {
+		u := auth.UserFromContext(r.Context())
+		rec, _ := s.db.GetSite(r.Context(), site)
+		if err := gov.CanReadSite(r.Context(), u, site, rec); err != nil {
+			writeError(w, "You do not have access to this site.", http.StatusForbidden)
+			return
+		}
+	}
+
+	ctx := r.Context()
+	deployID, err := s.cache.CurrentDeployID(ctx, site)
+	if err != nil || deployID == "" {
+		writeError(w, "Site has not been deployed yet.", http.StatusNotFound)
+		return
+	}
+
+	prefix := fmt.Sprintf("sites/%s/deploys/%s/", site, deployID)
+	objects, err := s.store.List(ctx, prefix)
+	if err != nil {
+		writeError(w, "Failed to list site files.", http.StatusInternalServerError)
+		return
+	}
+	if len(objects) == 0 {
+		writeError(w, "No files found for this site.", http.StatusNotFound)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/zip")
+	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%q", site+".zip"))
+	w.Header().Set("X-Content-Type-Options", "nosniff")
+
+	zw := zip.NewWriter(w)
+	defer zw.Close()
+	for _, obj := range objects {
+		rel := strings.TrimPrefix(obj.Path, prefix)
+		if rel == "" {
+			continue
+		}
+		rc, _, err := s.store.Get(ctx, obj.Path)
+		if err != nil {
+			continue
+		}
+		fw, err := zw.Create(rel)
+		if err != nil {
+			rc.Close()
+			return
+		}
+		_, _ = io.Copy(fw, rc)
+		rc.Close()
+	}
 }
 
 func mapDeployError(err error) int {
