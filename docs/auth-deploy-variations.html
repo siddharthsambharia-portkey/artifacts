@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Artifact — Agent Deploy Auth: No-Token Variations</title>
+<style>
+  :root{
+    --bg:#0b0d10; --panel:#14171c; --panel2:#1b1f26; --line:#2a2f38;
+    --ink:#e6e9ef; --dim:#9aa3b2; --faint:#6b7484;
+    --okta:#5b8cff; --ht:#ffb14e;
+    --good:#3ecf8e; --bad:#ff5d6c; --warn:#ffcf5c;
+    --mono:"SF Mono",ui-monospace,Menlo,Consolas,monospace;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:radial-gradient(1200px 600px at 70% -10%,#171b22,#0b0d10);color:var(--ink);font-family:var(--sans);line-height:1.5;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:1180px;margin:0 auto;padding:48px 28px 96px}
+  header.head{margin-bottom:36px}
+  .kicker{font:600 12px/1 var(--mono);letter-spacing:.18em;text-transform:uppercase;color:var(--faint)}
+  h1{font-size:33px;margin:14px 0 8px;letter-spacing:-.02em}
+  .sub{color:var(--dim);font-size:16px;max-width:780px}
+  .constraints{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px}
+  .chip{font:600 12px/1 var(--mono);letter-spacing:.03em;padding:8px 11px;border-radius:999px;border:1px solid var(--line);background:var(--panel);color:var(--dim)}
+  .chip b{color:var(--good)}
+  .tldr{margin-top:22px;background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--good);border-radius:10px;padding:16px 18px;font-size:14.5px;color:var(--dim)}
+  .tldr b{color:var(--ink)}
+
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:22px;margin-top:32px}
+  @media(max-width:880px){.grid{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;overflow:hidden;display:flex;flex-direction:column}
+  .card.ht{box-shadow:0 0 0 1px rgba(255,177,78,.14)}
+  .card.okta{opacity:.96}
+  .card h2{margin:0;padding:18px 20px;font-size:18px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--line)}
+  .tag{font:600 11px/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;padding:5px 8px;border-radius:6px}
+  .okta .tag{background:rgba(91,140,255,.16);color:var(--okta)}
+  .ht .tag{background:rgba(255,177,78,.16);color:var(--ht)}
+  .verdicttag{margin-left:auto;font:600 10.5px/1 var(--mono);letter-spacing:.06em;text-transform:uppercase;padding:5px 8px;border-radius:6px}
+  .verdicttag.win{background:rgba(62,207,142,.16);color:var(--good)}
+  .verdicttag.awk{background:rgba(255,93,108,.14);color:var(--bad)}
+  .card .body{padding:18px 20px;flex:1}
+  .lead{color:var(--dim);font-size:14px;margin:0 0 16px}
+
+  .flow{list-style:none;margin:0;padding:0;counter-reset:s}
+  .flow li{position:relative;padding:0 0 15px 40px;counter-increment:s}
+  .flow li::before{content:counter(s);position:absolute;left:0;top:-1px;width:26px;height:26px;border-radius:50%;display:grid;place-items:center;font:600 12px/1 var(--mono);color:#0b0d10}
+  .okta .flow li::before{background:var(--okta)}
+  .ht .flow li::before{background:var(--ht)}
+  .flow li::after{content:"";position:absolute;left:12px;top:26px;bottom:1px;width:2px;background:var(--line)}
+  .flow li:last-child::after{display:none}
+  .flow .t{font-weight:600;font-size:14.5px}
+  .flow .d{color:var(--dim);font-size:13px;margin-top:2px}
+  .flow .d code{font-family:var(--mono);font-size:12px;background:var(--panel2);border:1px solid var(--line);padding:1px 5px;border-radius:4px;color:var(--ink)}
+  .pill{display:inline-block;font:600 10.5px/1 var(--mono);letter-spacing:.06em;text-transform:uppercase;padding:3px 6px;border-radius:5px;margin-left:6px;vertical-align:middle}
+  .pill.browser{background:rgba(62,207,142,.14);color:var(--good)}
+  .pill.agent{background:rgba(91,140,255,.14);color:var(--okta)}
+  .pill.fragile{background:rgba(255,93,108,.14);color:var(--bad)}
+
+  .repeat{margin:14px 20px 18px;background:var(--panel2);border:1px dashed var(--line);border-radius:10px;padding:12px 14px;font-size:13px;color:var(--dim)}
+  .repeat b{color:var(--ink)}
+  .repeat .cmd{font-family:var(--mono);color:var(--good)}
+
+  .codeblock{margin-top:34px;background:#0e1115;border:1px solid var(--line);border-radius:14px;overflow:hidden}
+  .codeblock .ch{padding:12px 18px;border-bottom:1px solid var(--line);font:600 12px/1 var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--faint);display:flex;align-items:center;gap:10px}
+  .codeblock .ch .dotrow{display:flex;gap:6px}
+  .codeblock .ch .dotrow i{width:10px;height:10px;border-radius:50%;display:block}
+  pre{margin:0;padding:18px 20px;overflow:auto;font-family:var(--mono);font-size:13px;line-height:1.7;color:var(--ink)}
+  .c-com{color:var(--faint)} .c-cmd{color:var(--good)} .c-flag{color:var(--okta)} .c-str{color:var(--ht)} .c-key{color:#c792ea}
+
+  .stack{margin-top:34px;display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+  @media(max-width:880px){.stack{grid-template-columns:1fr}}
+  .sbox{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px 18px}
+  .sbox h3{margin:0 0 4px;font-size:15px;display:flex;align-items:center;gap:8px}
+  .sbox .ans{font:600 11px/1 var(--mono);letter-spacing:.05em;text-transform:uppercase;padding:3px 7px;border-radius:5px}
+  .ans.no{background:rgba(255,93,108,.14);color:var(--bad)}
+  .ans.yes{background:rgba(62,207,142,.16);color:var(--good)}
+  .sbox p{margin:8px 0 0;color:var(--dim);font-size:13px}
+
+  .crux{margin-top:34px;background:linear-gradient(180deg,#16191f,#111419);border:1px solid var(--line);border-radius:14px;padding:24px 26px}
+  .crux h2{margin:0 0 6px;font-size:20px}
+  .crux p{color:var(--dim);font-size:14.5px;margin:6px 0}
+  .tradeoff{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:18px}
+  @media(max-width:880px){.tradeoff{grid-template-columns:1fr}}
+  .lane{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+  .lane.good{border-left:3px solid var(--good)}
+  .lane.warn{border-left:3px solid var(--warn)}
+  .lane .lh{font:600 12px/1 var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--faint);margin-bottom:8px}
+  .lane code{font-family:var(--mono);font-size:12.5px;color:var(--ink)}
+  .lane p{font-size:13px;color:var(--dim);margin:8px 0 0}
+
+  footer{margin-top:44px;color:var(--faint);font-size:12.5px;text-align:center}
+  .legend{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;margin-top:12px}
+  .legend span{font-size:12px;color:var(--dim);display:inline-flex;align-items:center;gap:6px}
+  .dot{width:9px;height:9px;border-radius:50%}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="head">
+    <div class="kicker">Artifact · agent deploy auth · no-token design</div>
+    <h1>Deploying a site from an agent — with no Artifact token</h1>
+    <p class="sub">The goal: an employee says “deploy this” and a site goes live at <code>name.artifacts.company.com</code>. Constraint: Artifact issues <b>no token of its own</b>. The agent must prove identity using a credential that already exists.</p>
+    <div class="constraints">
+      <span class="chip"><b>✗</b> no Artifact token (no PAT, no minted token)</span>
+      <span class="chip"><b>✓</b> skills are the only default format</span>
+      <span class="chip"><b>—</b> CLI optional</span>
+      <span class="chip"><b>—</b> MCP not required</span>
+    </div>
+    <div class="tldr">
+      <b>The no-token rule changes the winner.</b> With <b>header-trust</b> there’s already a shared credential the agent can carry — the proxy secret — so a plain <code>curl</code> from a skill works with no token, no login, no CLI, no MCP. With <b>native OIDC</b> there is no pre-existing shared credential and tokens are banned, so a headless agent has nothing clean to present — it’s pushed to fragile cookie reuse or the browser drag-and-drop. <b>Header-trust is the natural fit for your setup.</b>
+    </div>
+  </header>
+
+  <div class="grid">
+    <!-- HEADER TRUST -->
+    <section class="card ht">
+      <h2><span class="tag">Variation 1</span> Okta — Header-Trust <span class="verdicttag win">fits the constraints</span></h2>
+      <div class="body">
+        <p class="lead">oauth2-proxy already does Okta SSO for browsers and Artifact trusts it via a shared secret (<code>X-Artifact-Proxy-Auth</code>, already enforced in <code>header_trust.go</code>). That secret is the credential the agent reuses — no token needed.</p>
+        <ol class="flow">
+          <li>
+            <div class="t">One-time setup <span class="pill browser">operator, once</span></div>
+            <div class="d">The proxy secret is placed where agents can read it (e.g. an env var on the dev box / CI). No per-user login, no Okta admin.</div>
+          </li>
+          <li>
+            <div class="t">Agent runs the deploy skill <span class="pill agent">agent</span></div>
+            <div class="d">The skill is just a <code>curl</code> recipe. No CLI install, no MCP server.</div>
+          </li>
+          <li>
+            <div class="t">Request goes <i>around</i> the proxy, straight to Artifact <span class="pill agent">agent</span></div>
+            <div class="d">Carries <code>X-Artifact-Proxy-Auth</code> (proves “inside the trust boundary”) + <code>X-Email</code> (self-asserted identity).</div>
+          </li>
+          <li>
+            <div class="t">Artifact accepts and serves the site</div>
+            <div class="d">In <code>trust</code> mode all employees are equal, so self-asserted identity is enough. → <code>https://my-site.artifacts.company.com</code></div>
+          </li>
+        </ol>
+      </div>
+      <div class="repeat">Every deploy: just <span class="cmd">“deploy this”</span> → URL. <b>Zero clicks, zero tokens.</b> The skill carries everything.</div>
+    </section>
+
+    <!-- NATIVE OIDC -->
+    <section class="card okta">
+      <h2><span class="tag">Variation 2</span> Okta — Native OIDC <span class="verdicttag awk">awkward without a token</span></h2>
+      <div class="body">
+        <p class="lead">Artifact is the Okta app and owns login. There is <b>no proxy in front</b>, so there is no pre-existing shared secret to lean on. Native OIDC’s natural credential <i>is</i> a token — which this design forbids.</p>
+        <ol class="flow">
+          <li>
+            <div class="t">Agent runs the deploy skill <span class="pill agent">agent</span></div>
+            <div class="d">It has no token and is not allowed to mint one.</div>
+          </li>
+          <li>
+            <div class="t">Only token-free option: reuse a browser session cookie <span class="pill fragile">fragile</span></div>
+            <div class="d">User signs in via Okta in a browser; the agent must scrape and replay the session cookie.</div>
+          </li>
+          <li>
+            <div class="t">Cookie expires → re-login <span class="pill fragile">fragile</span></div>
+            <div class="d">Short-lived sessions break the “zero-friction” promise; extracting cookies is brittle and agent-hostile.</div>
+          </li>
+          <li>
+            <div class="t">Fallback: human drag-and-drop in the web UI</div>
+            <div class="d">Reliable, but it isn’t the agent doing it — which defeats the point.</div>
+          </li>
+        </ol>
+      </div>
+      <div class="repeat">Net: with no token allowed and no proxy secret to borrow, <b>there’s no clean headless path</b>. Native OIDC wants a token; remove it and you’re left with cookies or manual upload.</div>
+    </section>
+  </div>
+
+  <!-- THE SKILL = THE INTEGRATION -->
+  <div class="codeblock">
+    <div class="ch"><span class="dotrow"><i style="background:#ff5f57"></i><i style="background:#febc2e"></i><i style="background:#28c840"></i></span> the entire integration — what the skill teaches the agent</div>
+<pre><span class="c-com"># Header-trust, no token. The skill bundles this curl. No CLI, no MCP.</span>
+<span class="c-cmd">curl</span> <span class="c-flag">-X</span> POST https://artifacts.company.com<span class="c-key">/api/v1/deploy</span> \
+  <span class="c-flag">-H</span> <span class="c-str">"X-Artifact-Proxy-Auth: $ARTIFACT_PROXY_SECRET"</span> \
+  <span class="c-flag">-H</span> <span class="c-str">"X-Email: you@company.com"</span> \
+  <span class="c-flag">-F</span> <span class="c-str">"site=my-site"</span> \
+  <span class="c-flag">-F</span> <span class="c-str">"files=@index.html"</span>
+
+<span class="c-com"># → { "site": "my-site", "url": "https://my-site.artifacts.company.com", ... }</span></pre>
+  </div>
+
+  <!-- CLI? MCP? SKILLS? -->
+  <div class="stack">
+    <div class="sbox">
+      <h3>Need a CLI? <span class="ans no">No</span></h3>
+      <p>The CLI is just sugar over the curl above. A skill that runs curl deploys a site with zero extra binaries to install or version.</p>
+    </div>
+    <div class="sbox">
+      <h3>Need MCP? <span class="ans no">No</span></h3>
+      <p>MCP is one more transport wrapping the same HTTP call. If a skill can run curl, an MCP server for deploy is redundant.</p>
+    </div>
+    <div class="sbox">
+      <h3>Skills only? <span class="ans yes">Yes</span></h3>
+      <p>Skills are the single default format. <code>artifact init</code> drops a skills folder; the agent reads it and just works — the most Quick-like path.</p>
+    </div>
+  </div>
+
+  <!-- THE ONE TRADEOFF -->
+  <div class="crux">
+    <h2>The one honest tradeoff in the no-token design</h2>
+    <p>Without a token, the shared proxy secret proves <i>“this came from inside the company,”</i> not <i>“this is a specific person.”</i> The email is self-asserted. That has a clear cost — and a clean upgrade path.</p>
+    <div class="tradeoff">
+      <div class="lane good">
+        <div class="lh">Fine for v1 (trust mode)</div>
+        <code>governance.mode: trust</code>
+        <p>All employees are equal — no ownership, no per-site permissions. Self-asserted identity is acceptable; the proxy already blocks outsiders. Stands up in an afternoon, skills-only.</p>
+      </div>
+      <div class="lane warn">
+        <div class="lh">What it does NOT give you (yet)</div>
+        <code>provable per-user identity</code>
+        <p>Anyone holding the secret can claim any email, so the audit log isn’t trustworthy and it won’t pass a security review. Provable identity is exactly what native OIDC / governed mode buys later — the Stage-2 upgrade.</p>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <div class="legend">
+      <span><span class="dot" style="background:var(--good)"></span>one-time / browser</span>
+      <span><span class="dot" style="background:var(--okta)"></span>agent step (silent)</span>
+      <span><span class="dot" style="background:var(--bad)"></span>fragile / not recommended</span>
+    </div>
+    <div style="margin-top:10px">Artifact · internal hosting platform — sites are SSO-gated and never exposed to the public internet.</div>
+  </footer>
+</div>
+</body>
+</html>

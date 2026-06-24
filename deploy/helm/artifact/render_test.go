@@ -219,6 +219,29 @@ func TestWorkloadIdentityPathRendersWhenFallbackOff(t *testing.T) {
 	}
 }
 
+// Issue 014: for the S3 driver the fallback must source the access/secret keys from a
+// Kubernetes Secret reference (secretKeyRef), never as plaintext values.
+func TestStorageKeyFallbackS3UsesSecretKeyRefNotPlaintext(t *testing.T) {
+	out := helmTemplate(t,
+		"--set", "storageKeyFallback.enabled=true",
+		"--set", "storageKeyFallback.secretName=artifact-s3-creds",
+		"--set", "config.storage.driver=s3",
+	)
+
+	if !strings.Contains(out, "ARTIFACT_S3_ACCESS_KEY") {
+		t.Errorf("s3 fallback must inject ARTIFACT_S3_ACCESS_KEY")
+	}
+	if !strings.Contains(out, "ARTIFACT_S3_SECRET_KEY") {
+		t.Errorf("s3 fallback must inject ARTIFACT_S3_SECRET_KEY")
+	}
+	if !strings.Contains(out, "secretKeyRef") {
+		t.Errorf("s3 fallback keys must come from a secretKeyRef, not plaintext")
+	}
+	if !strings.Contains(out, "artifact-s3-creds") {
+		t.Errorf("s3 fallback keys must reference the named Kubernetes Secret")
+	}
+}
+
 // Issue 015: cloudSqlProxy.enabled renders the Cloud SQL Auth Proxy sidecar alongside
 // the app container; the sidecar uses the pod's existing identity.
 func TestCloudSQLProxySidecarRendersWhenEnabled(t *testing.T) {
