@@ -17,7 +17,9 @@ if [ "$VERSION" = "latest" ]; then
   VERSION=$(curl -fsSL "https://api.github.com/repos/${REPO}/releases/latest" | grep tag_name | cut -d'"' -f4)
 fi
 
-URL="https://github.com/${REPO}/releases/download/${VERSION}/artifact_${VERSION#v}_${OS}_${ARCH}.tar.gz"
+ARCHIVE="artifact_${VERSION#v}_${OS}_${ARCH}.tar.gz"
+BASE="https://github.com/${REPO}/releases/download/${VERSION}"
+URL="${BASE}/${ARCHIVE}"
 
 echo "Installing Artifact ${VERSION} for ${OS}/${ARCH}..."
 
@@ -36,6 +38,22 @@ if ! curl -fsSL "$URL" -o "$TMP/artifact.tar.gz" 2>/dev/null; then
   (cd "$SRC/artifact" && go build -o "$INSTALL_DIR/artifact" ./cmd/artifact)
   rm -rf "$SRC"
 else
+  if curl -fsSL "${BASE}/checksums.txt" -o "$TMP/checksums.txt" 2>/dev/null; then
+    expected=$(grep " ${ARCHIVE}\$" "$TMP/checksums.txt" | awk '{print $1}')
+    if [ -n "$expected" ]; then
+      if command -v sha256sum >/dev/null 2>&1; then
+        actual=$(sha256sum "$TMP/artifact.tar.gz" | awk '{print $1}')
+      elif command -v shasum >/dev/null 2>&1; then
+        actual=$(shasum -a 256 "$TMP/artifact.tar.gz" | awk '{print $1}')
+      fi
+      if [ -n "$actual" ] && [ "$expected" != "$actual" ]; then
+        echo "Checksum verification failed for ${ARCHIVE}." >&2
+        echo "  expected: $expected" >&2
+        echo "  actual:   $actual" >&2
+        exit 1
+      fi
+    fi
+  fi
   tar -xzf "$TMP/artifact.tar.gz" -C "$TMP"
   install -m 755 "$TMP/artifact" "$INSTALL_DIR/artifact"
 fi
